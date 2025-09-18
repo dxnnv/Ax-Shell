@@ -19,7 +19,6 @@ from gi.repository import GLib
 import config.data as data
 from modules.upower.upower import UPowerManager
 import modules.icons as icons
-from services.network import NetworkClient
 
 logger = logging.getLogger(__name__)
 
@@ -93,25 +92,45 @@ class MetricsProvider:
         GLib.idle_add(self._process_gpu_output, output, error_message)
         self._gpu_update_running = False
 
+    @staticmethod
+    def _safe_load_nvtop(output: str):
+        """Load nvtop JSON safely."""
+        try:
+            return json.loads(output)
+        except json.JSONDecodeError:
+            start = output.find('[')
+            end = output.rfind(']')
+            if start != -1 and end != -1 and end > start:
+                return json.loads(output[start:end+1])
+            raise
+
     def _process_gpu_output(self, output, error_message):
-        """Process nvtop JSON output on the main loop."""
         try:
             if error_message:
                 logger.error(f"GPU update failed: {error_message}")
                 self.gpu = []
             elif output:
-                info = json.loads(output)
+                info = self._safe_load_nvtop(output)
+                if not isinstance(info, list):
+                    logger.error(f"Unexpected nvtop payload type: {type(info).__name__}")
+                    self.gpu = []
+                    return False
+
                 try:
-                    self.gpu = [
-                        (
-                            int(v["gpu_util"].strip("%"))
-                            if v["gpu_util"] is not None
-                            else 0
-                        )
-                        for v in info
-                    ]
-                except (KeyError, ValueError, TypeError) as e:
-                    logger.error(f"Failed parsing nvtop JSON: {e}")
+                    idx = int(getattr(data, "GPU_DEVICE_INDEX", 0))
+                except Exception:
+                    idx = 0
+
+                if 0 <= idx < len(info):
+                    v = info[idx] or {}
+                    util_raw = v.get("gpu_util")
+                    try:
+                        util = int(str(util_raw).strip("%")) if util_raw is not None else 0
+                    except Exception:
+                        util = 0
+                    # keep a single-element list so widgets work unchanged
+                    self.gpu = [util]
+                else:
                     self.gpu = []
             else:
                 logger.warning("nvtop returned no output.")
@@ -119,10 +138,12 @@ class MetricsProvider:
         except json.JSONDecodeError as e:
             logger.error(f"JSON decode error: {e}")
             self.gpu = []
+        except (KeyError, ValueError, TypeError) as e:
+            logger.error(f"Failed parsing nvtop JSON: {e}")
+            self.gpu = []
         except Exception as e:
             logger.error(f"Error processing nvtop output: {e}")
             self.gpu = []
-
         return False
 
     def get_metrics(self):
@@ -134,7 +155,18 @@ class MetricsProvider:
     def get_gpu_info(self):
         try:
             result = subprocess.check_output(["nvtop", "-s"], text=True, timeout=5)
-            return json.loads(result)
+            info = self._safe_load_nvtop(result)
+            if not isinstance(info, list) or not info:
+                return []
+    
+            try:
+                idx = int(getattr(data, "GPU_DEVICE_INDEX", 0))
+            except Exception:
+                idx = 0
+    
+            if 0 <= idx < len(info):
+                return [info[idx]]   # only the selected GPU
+            return []
         except FileNotFoundError:
             logger.warning("nvtop not found; GPU info unavailable.")
             return []
@@ -150,6 +182,7 @@ class MetricsProvider:
         except Exception as e:
             logger.error(f"Unexpected error during GPU init: {e}")
             return []
+
 
 shared_provider = MetricsProvider()
 
@@ -524,190 +557,3 @@ class Battery(Button):
             charging_status = "Battery"
 
         self.set_tooltip_markup(f"{charging_status}" if not data.VERTICAL else f"{charging_status}: {percentage}%")
-
-class NetworkApplet(Button):
-    def __init__(self, **kwargs):
-        super().__init__(name="button-bar", **kwargs)
-        self.download_label = Label(name="download-label", markup="Download: 0 B/s")
-        self.network_client = NetworkClient()
-        self.upload_label = Label(name="upload-label", markup="Upload: 0 B/s")
-        self.wifi_label = Label(name="network-icon-label", markup="WiFi: Unknown")
-
-        self.is_mouse_over = False
-        self.downloading = False
-        self.uploading = False
-
-        self.download_icon = Label(name="download-icon-label", markup=icons.download, v_align="center", h_align="center", h_expand=True, v_expand=True)
-        self.upload_icon = Label(name="upload-icon-label", markup=icons.upload, v_align="center", h_align="center", h_expand=True, v_expand=True)
-
-        self.download_box = Box(
-            children=[self.download_icon, self.download_label],
-        )
-
-        self.upload_box = Box(
-            children=[self.upload_label, self.upload_icon],
-        )
-
-        self.download_revealer = Revealer(child=self.download_box, transition_type = "slide-right" if not data.VERTICAL else "slide-down", child_revealed=False)
-        self.upload_revealer = Revealer(child=self.upload_box, transition_type="slide-left" if not data.VERTICAL else "slide-up",child_revealed=False)
-
-        self.children = Box(
-            orientation="h" if not data.VERTICAL else "v",
-            children=[self.upload_revealer, self.wifi_label, self.download_revealer],
-        )
-
-        if data.VERTICAL:
-            self.download_label.set_visible(False)
-            self.upload_label.set_visible(False)
-            self.upload_icon.set_margin_top(4)
-            self.download_icon.set_margin_bottom(4)
-
-        self.last_counters = psutil.net_io_counters()
-        self.last_time = time.time()
-        invoke_repeater(1000, self.update_network)
-
-        self.connect("enter-notify-event", self.on_mouse_enter)
-        self.connect("leave-notify-event", self.on_mouse_leave)
-
-    def update_network(self):
-        current_time = time.time()
-        elapsed = current_time - self.last_time
-        current_counters = psutil.net_io_counters()
-        download_speed = (current_counters.bytes_recv - self.last_counters.bytes_recv) / elapsed
-        upload_speed = (current_counters.bytes_sent - self.last_counters.bytes_sent) / elapsed
-        download_str = self.format_speed(download_speed)
-        upload_str = self.format_speed(upload_speed)
-        self.download_label.set_markup(download_str)
-        self.upload_label.set_markup(upload_str)
-
-        self.downloading = (download_speed >= 10e6)
-        self.uploading = (upload_speed >= 2e6)
-
-        if not self.is_mouse_over:
-            if self.downloading:
-                self.download_urgent()
-            elif self.uploading:
-                self.upload_urgent()
-            else:
-                self.remove_urgent()
-
-        show_download = self.downloading or (self.is_mouse_over and not data.VERTICAL)
-        show_upload = self.uploading or (self.is_mouse_over and not data.VERTICAL)
-        self.download_revealer.set_reveal_child(show_download)
-        self.upload_revealer.set_reveal_child(show_upload)
-
-        primary_device = None
-        if self.network_client:
-            primary_device = self.network_client.primary_device
-
-        tooltip_base = ""
-        tooltip_vertical = ""
-
-        if primary_device == "wired" and self.network_client.ethernet_device:
-            ethernet_state = self.network_client.ethernet_device.internet
-
-            if ethernet_state == "activated":
-                self.wifi_label.set_markup(icons.world)
-            elif ethernet_state == "activating":
-                self.wifi_label.set_markup(icons.world)
-            else:
-                self.wifi_label.set_markup(icons.world_off)
-
-            tooltip_base = "Ethernet Connection"
-            tooltip_vertical = f"SSID: Ethernet\nUpload: {upload_str}\nDownload: {download_str}"
-
-        elif self.network_client and self.network_client.wifi_device:
-            if self.network_client.wifi_device.ssid != "Disconnected":
-                strength = self.network_client.wifi_device.strength
-
-                if strength >= 75:
-                    self.wifi_label.set_markup(icons.wifi_3)
-                elif strength >= 50:
-                    self.wifi_label.set_markup(icons.wifi_2)
-                elif strength >= 25:
-                    self.wifi_label.set_markup(icons.wifi_1)
-                else:
-                    self.wifi_label.set_markup(icons.wifi_0)
-
-                tooltip_base = self.network_client.wifi_device.ssid
-                tooltip_vertical = f"SSID: {self.network_client.wifi_device.ssid}\nUpload: {upload_str}\nDownload: {download_str}"
-            else:
-                self.wifi_label.set_markup(icons.world_off)
-                tooltip_base = "Disconnected"
-                tooltip_vertical = f"SSID: Disconnected\nUpload: {upload_str}\nDownload: {download_str}"
-        else:
-            self.wifi_label.set_markup(icons.world_off)
-            tooltip_base = "Disconnected"
-            tooltip_vertical = f"SSID: Disconnected\nUpload: {upload_str}\nDownload: {download_str}"
-
-        if data.VERTICAL:
-            self.set_tooltip_text(tooltip_vertical)
-        else:
-            self.set_tooltip_text(tooltip_base)
-
-        self.last_counters = current_counters
-        self.last_time = current_time
-        return True
-
-    def format_speed(self, speed):
-        if speed < 1024:
-            return f"{speed:.0f} B/s"
-        elif speed < 1024 * 1024:
-            return f"{speed / 1024:.1f} KB/s"
-        else:
-            return f"{speed / (1024 * 1024):.1f} MB/s"
-
-    def on_mouse_enter(self, *_):
-        self.is_mouse_over = True
-        if not data.VERTICAL:
-
-            self.download_revealer.set_reveal_child(True)
-            self.upload_revealer.set_reveal_child(True)
-        return
-
-    def on_mouse_leave(self, *_):
-        self.is_mouse_over = False
-        if not data.VERTICAL:
-
-            self.download_revealer.set_reveal_child(self.downloading)
-            self.upload_revealer.set_reveal_child(self.uploading)
-
-            if self.downloading:
-                self.download_urgent()
-            elif self.uploading:
-                self.upload_urgent()
-            else:
-                self.remove_urgent()
-        return
-
-    def upload_urgent(self):
-        self.add_style_class("upload")
-        self.wifi_label.add_style_class("urgent")
-        self.upload_label.add_style_class("urgent")
-        self.upload_icon.add_style_class("urgent")
-        self.download_icon.add_style_class("urgent")
-        self.download_label.add_style_class("urgent")
-        self.upload_revealer.set_reveal_child(True)
-        self.download_revealer.set_reveal_child(self.downloading)
-        return
-
-    def download_urgent(self):
-        self.add_style_class("download")
-        self.wifi_label.add_style_class("urgent")
-        self.download_label.add_style_class("urgent")
-        self.download_icon.add_style_class("urgent")
-        self.upload_icon.add_style_class("urgent")
-        self.upload_label.add_style_class("urgent")
-        self.download_revealer.set_reveal_child(True)
-        self.upload_revealer.set_reveal_child(self.uploading)
-        return
-
-    def remove_urgent(self):
-        self.remove_style_class("download")
-        self.remove_style_class("upload")
-        self.wifi_label.remove_style_class("urgent")
-        self.download_label.remove_style_class("urgent")
-        self.upload_label.remove_style_class("urgent")
-        self.download_icon.remove_style_class("urgent")
-        self.upload_icon.remove_style_class("urgent")
-        return

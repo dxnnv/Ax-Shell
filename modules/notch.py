@@ -156,11 +156,6 @@ class Notch(Window):
         self.nhistory = self.dashboard.widgets.notification_history
 
         self.applet_stack = self.dashboard.widgets.applet_stack
-        self.btdevices = self.dashboard.widgets.bluetooth
-        self.nwconnections = self.dashboard.widgets.network_connections
-
-        self.btdevices.set_visible(False)
-        self.nwconnections.set_visible(False)
 
         self.launcher = AppLauncher(notch=self)
         self.overview = Overview(monitor_id=monitor_id)
@@ -555,35 +550,7 @@ class Notch(Window):
         current_stack_child = self.stack.get_visible_child()
         is_dashboard_currently_visible = current_stack_child == self.dashboard
 
-        if widget_name == "network_applet":
-            if is_dashboard_currently_visible:
-                if (
-                    self.dashboard.stack.get_visible_child() == self.dashboard.widgets
-                    and self.applet_stack.get_visible_child() == self.nwconnections
-                ):
-                    self.close_notch()
-                    return
-
-                self.set_keyboard_mode("exclusive")
-                self.dashboard.go_to_section("widgets")
-                self.applet_stack.set_visible_child(self.nwconnections)
-                return
-
-        elif widget_name == "bluetooth":
-            if is_dashboard_currently_visible:
-                if (
-                    self.dashboard.stack.get_visible_child() == self.dashboard.widgets
-                    and self.applet_stack.get_visible_child() == self.btdevices
-                ):
-                    self.close_notch()
-                    return
-
-                self.set_keyboard_mode("exclusive")
-                self.dashboard.go_to_section("widgets")
-                self.applet_stack.set_visible_child(self.btdevices)
-                return
-
-        elif widget_name == "dashboard":
+        if widget_name == "dashboard":
             if is_dashboard_currently_visible:
                 if (
                     self.dashboard.stack.get_visible_child() == self.dashboard.widgets
@@ -669,13 +636,7 @@ class Notch(Window):
             focus_action()
 
         if target_widget_on_stack == self.dashboard:
-            if widget_name == "bluetooth":
-                self.dashboard.go_to_section("widgets")
-                self.applet_stack.set_visible_child(self.btdevices)
-            elif widget_name == "network_applet":
-                self.dashboard.go_to_section("widgets")
-                self.applet_stack.set_visible_child(self.nwconnections)
-            elif widget_name in dashboard_sections_map:
+            if widget_name in dashboard_sections_map:
                 self.dashboard.go_to_section(widget_name)
             elif widget_name == "dashboard":
                 self.dashboard.go_to_section("widgets")

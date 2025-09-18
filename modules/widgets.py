@@ -6,12 +6,10 @@ from fabric.widgets.label import Label
 from fabric.widgets.stack import Stack
 
 import config.data as data
-from modules.bluetooth import BluetoothConnections
 from modules.buttons import Buttons
 from modules.calendar import Calendar
 from modules.controls import ControlSliders
 from modules.metrics import Metrics
-from modules.network import NetworkConnections
 from modules.notifications import NotificationHistory
 from modules.player import Player
 
@@ -42,7 +40,6 @@ class Widgets(Box):
         self.notch = kwargs["notch"]
 
         self.buttons = Buttons(widgets=self)
-        self.bluetooth = BluetoothConnections(widgets=self)
 
         self.box_1 = Box(
             name="box-1",
@@ -69,16 +66,12 @@ class Widgets(Box):
 
         self.notification_history = NotificationHistory()
 
-        self.network_connections = NetworkConnections(widgets=self)
-
         self.applet_stack = Stack(
             h_expand=True,
             v_expand=True,
             transition_type="slide-left-right",
             children=[
-                self.notification_history,
-                self.network_connections,
-                self.bluetooth,
+                self.notification_history
             ],
         )
 
@@ -156,11 +149,5 @@ class Widgets(Box):
 
         self.add(self.container_3)
 
-    def show_bt(self):
-        self.applet_stack.set_visible_child(self.bluetooth)
-
     def show_notif(self):
         self.applet_stack.set_visible_child(self.notification_history)
-
-    def show_network_applet(self):
-        self.notch.open_notch("network_applet")

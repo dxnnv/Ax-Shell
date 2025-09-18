@@ -18,7 +18,7 @@ import config.data as data
 import modules.icons as icons
 from modules.controls import ControlSmall
 from modules.dock import Dock
-from modules.metrics import Battery, MetricsSmall, NetworkApplet
+from modules.metrics import Battery, MetricsSmall
 from modules.systemprofiles import Systemprofiles
 from modules.systemtray import SystemTray
 from modules.weather import Weather
@@ -186,8 +186,6 @@ class Bar(Window):
         self.weather = Weather()
         self.sysprofiles = Systemprofiles()
 
-        self.network = NetworkApplet()
-
         self.lang_label = Label(name="lang-label")
         self.language = Button(
             name="language", h_align="center", v_align="center", child=self.lang_label
@@ -277,7 +275,6 @@ class Bar(Window):
         self.rev_left = [
             self.weather,
             self.sysprofiles,
-            self.network,
         ]
 
         self.revealer_left = Revealer(
@@ -321,7 +318,6 @@ class Bar(Window):
             self.systray,
             self.control,
             self.sysprofiles,
-            self.network,
             self.button_tools,
         ]
 
@@ -431,7 +427,6 @@ class Bar(Window):
             self.date_time,
             self.ws_container,
             self.weather,
-            self.network,
             self.battery,
             self.metrics,
             self.systray,
@@ -500,7 +495,6 @@ class Bar(Window):
             "button_apps": self.button_apps,
             "systray": self.systray,
             "control": self.control,
-            "network": self.network,
             "button_tools": self.button_tools,
             "button_overview": self.button_overview,
             "ws_container": self.ws_container,
@@ -522,7 +516,6 @@ class Bar(Window):
             "button_apps": self.button_apps,
             "systray": self.systray,
             "control": self.control,
-            "network": self.network,
             "button_tools": self.button_tools,
             "button_overview": self.button_overview,
             "ws_container": self.ws_container,

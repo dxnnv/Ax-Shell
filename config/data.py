@@ -94,7 +94,6 @@ BAR_COMPONENTS_VISIBILITY = {
     "button_apps": config.get("bar_button_apps_visible", DEFAULTS["bar_button_apps_visible"]),
     "systray": config.get("bar_systray_visible", DEFAULTS["bar_systray_visible"]),
     "control": config.get("bar_control_visible", DEFAULTS["bar_control_visible"]),
-    "network": config.get("bar_network_visible", DEFAULTS["bar_network_visible"]),
     "button_tools": config.get("bar_button_tools_visible", DEFAULTS["bar_button_tools_visible"]),
     "sysprofiles": config.get("bar_sysprofiles_visible", DEFAULTS["bar_sysprofiles_visible"]),
     "button_overview": config.get("bar_button_overview_visible", DEFAULTS["bar_button_overview_visible"]),
@@ -108,6 +107,7 @@ BAR_COMPONENTS_VISIBILITY = {
 }
 
 BAR_METRICS_DISKS = config.get("bar_metrics_disks", DEFAULTS["bar_metrics_disks"])
+GPU_DEVICE_INDEX = 0
 METRICS_VISIBLE = config.get("metrics_visible", DEFAULTS["metrics_visible"])
 METRICS_SMALL_VISIBLE = config.get("metrics_small_visible", DEFAULTS["metrics_small_visible"])
 SELECTED_MONITORS = config.get("selected_monitors", DEFAULTS["selected_monitors"])
