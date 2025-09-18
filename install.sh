@@ -11,7 +11,6 @@ PACKAGES=(
   cava
   cliphist
   fabric-cli-git
-  gnome-bluetooth-3.0
   gobject-introspection
   gpu-screen-recorder
   hypridle
