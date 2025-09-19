@@ -59,7 +59,7 @@ DEFAULTS = {
     "vertical": False,  # Kept for backward compatibility
     "centered_bar": False,
     "datetime_12h_format": False,
-    "datetime_show_seconds": True,
+    "datetime_show_seconds": False,
     "terminal_command": "kitty -e",
     "auto_append_hyprland": True,  # Enable auto-append of source string to hyprland.conf
     "dock_enabled": True,

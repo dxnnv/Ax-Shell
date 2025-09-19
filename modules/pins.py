@@ -395,13 +395,6 @@ class Pins(Gtk.Box):
         grid.set_column_homogeneous(True)
         grid.set_row_homogeneous(True)
 
-
-
-
-
-
-
-
         scrolled_window = ScrolledWindow(child=grid, name="scrolled-window", style_classes="pins", propagate_width=False, propagate_height=False)
         scrolled_window.set_hexpand(True)
         scrolled_window.set_vexpand(True)

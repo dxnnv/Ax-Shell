@@ -19,3 +19,17 @@
     color: var(--shadow);
   }
 }
+
+#applet-padding {
+  padding: 4px;
+}
+
+#applet-header {
+  border-radius: 12px;
+  border: 2px solid var(--surface);
+  padding: 4px;
+}
+
+#applet-title {
+  font-weight: bold;
+}

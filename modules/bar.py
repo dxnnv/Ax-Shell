@@ -65,7 +65,7 @@ class Bar(Window):
 
         # Initialize 12h format and seconds display from config
         self.current_12h_setting = getattr(data, 'DATETIME_12H_FORMAT', False)
-        self.show_seconds = getattr(data, 'DATETIME_SHOW_SECONDS', True)
+        self.show_seconds = getattr(data, 'DATETIME_SHOW_SECONDS', False)
 
         self.anchor_var = ""
         self.margin_var = ""
@@ -620,7 +620,7 @@ class Bar(Window):
                 self.display_mode = "time"
         elif event.button == 2: # Middle click
             # Toggle seconds display
-            prev_seconds = getattr(data, 'DATETIME_SHOW_SECONDS', True)
+            prev_seconds = getattr(data, 'DATETIME_SHOW_SECONDS', False)
             setattr(data, "DATETIME_SHOW_SECONDS", not prev_seconds)
 
         # Update display immediately
@@ -635,15 +635,15 @@ class Bar(Window):
 
         # Use cached settings or fallback to defaults
         use_12h = getattr(self, "current_12h_setting", data.DATETIME_12H_FORMAT)
-        show_seconds = getattr(self, "show_seconds", True)
+        show_seconds = getattr(self, "show_seconds", False)
 
         try:
             import config.data as data
-            show_seconds = getattr(data, 'DATETIME_SHOW_SECONDS', True)
+            show_seconds = getattr(data, 'DATETIME_SHOW_SECONDS', False)
             use_12h = getattr(data, 'DATETIME_12H_FORMAT', False)
         except Exception:
             # fallback defaults
-            show_seconds = True
+            show_seconds = False
             use_12h = False
 
         # Determine time format strings based on settings and orientation

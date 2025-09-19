@@ -3,8 +3,7 @@ import logging
 
 import cairo
 from fabric.hyprland.widgets import get_hyprland_connection
-from fabric.utils import (exec_shell_command, exec_shell_command_async,
-                          get_relative_path, idle_add, remove_handler)
+from fabric.utils import (exec_shell_command, exec_shell_command_async, get_relative_path, idle_add, remove_handler)
 from fabric.utils.helpers import get_desktop_applications
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -195,10 +194,6 @@ class Dock(Window):
                     children=[self.corner_left, self.dock_eventbox, self.corner_right]
                 )
             else:
-
-                
-
-                
                 if anchor_to_set == "right":
                     self.corner_top = Box(
                         name="dock-corner-top", orientation=Gtk.Orientation.HORIZONTAL, v_align="start",

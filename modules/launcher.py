@@ -7,8 +7,7 @@ import subprocess
 from collections.abc import Iterator
 
 import numpy as np
-from fabric.utils import (DesktopApp, exec_shell_command_async,
-                          get_desktop_applications, idle_add, remove_handler)
+from fabric.utils import (DesktopApp, exec_shell_command_async, get_desktop_applications, idle_add, remove_handler)
 from fabric.utils.helpers import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
