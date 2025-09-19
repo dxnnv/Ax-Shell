@@ -58,7 +58,8 @@ DEFAULTS = {
     "bar_position": "Top",  # New default position setting
     "vertical": False,  # Kept for backward compatibility
     "centered_bar": False,
-    "datetime_12h_format": False,  # Add this line
+    "datetime_12h_format": False,
+    "datetime_show_seconds": True,
     "terminal_command": "kitty -e",
     "auto_append_hyprland": True,  # Enable auto-append of source string to hyprland.conf
     "dock_enabled": True,
@@ -100,6 +101,7 @@ DEFAULTS = {
         "disk": True,
         "gpu": True,
     },
+    'settings_window_resizable': False,
     "limited_apps_history": ["Spotify"],
     "history_ignored_apps": ["Hyprshot"],
     "selected_monitors": [],  # Empty array means show on all monitors

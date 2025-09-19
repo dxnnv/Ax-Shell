@@ -12,7 +12,7 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
-from gi.repository import Gdk, Gtk
+from gi.repository import Gdk, GLib, Gtk # type: ignore
 
 import config.data as data
 import modules.icons as icons
@@ -58,6 +58,14 @@ class Bar(Window):
             all_visible=True,
             monitor=monitor_id,
         )
+
+        # Initialize display mode and previous mode for datetime cycling
+        self.display_mode = "time"
+        self.previous_mode = "time"
+
+        # Initialize 12h format and seconds display from config
+        self.current_12h_setting = getattr(data, 'DATETIME_12H_FORMAT', False)
+        self.show_seconds = getattr(data, 'DATETIME_SHOW_SECONDS', True)
 
         self.anchor_var = ""
         self.margin_var = ""
@@ -193,27 +201,26 @@ class Bar(Window):
         self.on_language_switch()
         self.connection.connect("event::activelayout", self.on_language_switch)
 
-        # Determine date-time format based on the new setting
-        if data.DATETIME_12H_FORMAT:
-            time_format_horizontal = "%I:%M %p"
-            time_format_vertical = "%I\n%M\n%p"
-        else:
-            time_format_horizontal = "%H:%M"
-            time_format_vertical = "%H\n%M"
-
-        self.date_time = DateTime(
+        self.datetime_label = Label(name="datetime-label")
+        self.date_time = Button(
             name="date-time",
-            formatters=(
-                [time_format_horizontal]
-                if not data.VERTICAL
-                else [time_format_vertical]
-            ),
+            child=self.datetime_label,
+            # formatters=(
+            #     [time_format_horizontal]
+            #     if not data.VERTICAL
+            #     else [time_format_vertical]
+            # ),
             h_align="center" if not data.VERTICAL else "fill",
             v_align="center",
             h_expand=True,
             v_expand=True,
             style_classes=["vertical"] if data.VERTICAL else [],
         )
+        self.date_time.connect("button-press-event", self.on_datetime_button_press)
+
+        # Start the update timer
+        self.update_datetime_display()
+        GLib.timeout_add_seconds(1, self.update_datetime_display)
 
         self.button_apps = Button(
             name="button-bar",
@@ -490,6 +497,10 @@ class Bar(Window):
         self.systray._update_visibility()
         self.chinese_numbers()
 
+    def on_seconds_display_changed(self, show_seconds: bool):
+        self.show_seconds = show_seconds
+        self.update_datetime_display()
+
     def apply_component_props(self):
         components = {
             "button_apps": self.button_apps,
@@ -568,7 +579,7 @@ class Bar(Window):
             window.set_cursor(None)
 
     def on_button_clicked(self, *args):
-        exec_shell_command_async("notify-send 'Botón presionado' '¡Funciona!'")
+        exec_shell_command_async("notify-send 'Button pressed' 'It works!'")
 
     def search_apps(self):
         if self.notch:
@@ -598,6 +609,67 @@ class Bar(Window):
         else:
             self.lang_label.add_style_class("icon")
             self.lang_label.set_markup(icons.keyboard)
+
+    def on_datetime_button_press(self, widget, event):
+        """Handle different mouse button clicks on datetime widget"""
+        if event.button == 1:  # Left click
+            # Toggle between time <-> date
+            if self.display_mode == "time":
+                self.display_mode = "date"
+            else:
+                self.display_mode = "time"
+        elif event.button == 2: # Middle click
+            # Toggle seconds display
+            prev_seconds = getattr(data, 'DATETIME_SHOW_SECONDS', True)
+            setattr(data, "DATETIME_SHOW_SECONDS", not prev_seconds)
+
+        # Update display immediately
+        self.update_datetime_display()
+        return True
+
+    def update_datetime_display(self):
+        from datetime import datetime
+        import config.data as data  # import here to ensure data is defined
+
+        now = datetime.now()
+
+        # Use cached settings or fallback to defaults
+        use_12h = getattr(self, "current_12h_setting", data.DATETIME_12H_FORMAT)
+        show_seconds = getattr(self, "show_seconds", True)
+
+        try:
+            import config.data as data
+            show_seconds = getattr(data, 'DATETIME_SHOW_SECONDS', True)
+            use_12h = getattr(data, 'DATETIME_12H_FORMAT', False)
+        except Exception:
+            # fallback defaults
+            show_seconds = True
+            use_12h = False
+
+        # Determine time format strings based on settings and orientation
+        if use_12h:
+            if show_seconds:
+                time_format = "%I:%M:%S %p" if not data.VERTICAL else "%I\n%M\n%S\n%p"
+            else:
+                time_format = "%I:%M %p" if not data.VERTICAL else "%I\n%M\n%p"
+        else:
+            if show_seconds:
+                time_format = "%H:%M:%S" if not data.VERTICAL else "%H\n%M\n%S"
+            else:
+                time_format = "%H:%M" if not data.VERTICAL else "%H\n%M"
+
+        # Format the display text based on current display mode
+        if self.display_mode == "time":
+            text = now.strftime(time_format)
+        elif self.display_mode == "date":
+            text = now.strftime("%m-%d-%Y" if not data.VERTICAL else "%m\n%d\n%Y")
+        else:
+            # Fallback to time if unknown mode
+            text = now.strftime(time_format)
+
+        self.datetime_label.set_text(text)
+        return True  # Continue the GLib timeout
+
 
     def toggle_hidden(self):
         self.hidden = not self.hidden

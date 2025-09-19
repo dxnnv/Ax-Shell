@@ -41,7 +41,7 @@ DOCK_THEME = "Pills"
 
 PANEL_THEME = "Notch"
 DATETIME_12H_FORMAT = False  # Default value if config file doesn't exist
-
+DATETIME_SHOW_SECONDS = True
 
 def load_config():
     """Load the configuration from config.json"""
@@ -76,6 +76,7 @@ BAR_POSITION = config.get("bar_position", DEFAULTS["bar_position"])
 VERTICAL = BAR_POSITION in ["Left", "Right"]
 CENTERED_BAR = config.get("centered_bar", DEFAULTS["centered_bar"])
 DATETIME_12H_FORMAT = config.get("datetime_12h_format", DEFAULTS["datetime_12h_format"])
+DATETIME_SHOW_SECONDS = config.get('datetime_show_seconds', True)
 TERMINAL_COMMAND = config.get("terminal_command", DEFAULTS["terminal_command"])
 DOCK_ENABLED = config.get("dock_enabled", DEFAULTS["dock_enabled"])
 DOCK_ALWAYS_OCCLUDED = config.get("dock_always_occluded", DEFAULTS["dock_always_occluded"])
@@ -111,3 +112,4 @@ GPU_DEVICE_INDEX = 0
 METRICS_VISIBLE = config.get("metrics_visible", DEFAULTS["metrics_visible"])
 METRICS_SMALL_VISIBLE = config.get("metrics_small_visible", DEFAULTS["metrics_small_visible"])
 SELECTED_MONITORS = config.get("selected_monitors", DEFAULTS["selected_monitors"])
+SETTINGS_WINDOW_RESIZABLE = False

@@ -17,7 +17,7 @@ from fabric.widgets.scale import Scale
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.stack import Stack
 from fabric.widgets.window import Window
-from gi.repository import GdkPixbuf, GLib, Gtk
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk # type: ignore
 from PIL import Image
 
 from .data import (
@@ -40,7 +40,7 @@ class HyprConfGUI(Window):
             **kwargs,
         )
 
-        self.set_resizable(False)
+        self.set_resizable(bind_vars.get('settings_window_resizable', False))
 
         self.selected_face_icon = None
         self.show_lock_checkbox = show_lock_checkbox
@@ -246,9 +246,7 @@ class HyprConfGUI(Window):
         vbox.add(separator1)
 
         # START NEW SECTION FOR DATETIME FORMAT
-        datetime_format_header = Label(
-            markup="<b>Date & Time Format</b>", h_align="start"
-        )
+        datetime_format_header = Label(markup="<b><span>Date &amp; Time Options</span></b>", h_align="start")
         vbox.add(datetime_format_header)
 
         datetime_grid = Gtk.Grid()
@@ -256,7 +254,7 @@ class HyprConfGUI(Window):
         datetime_grid.set_row_spacing(10)
         datetime_grid.set_margin_start(10)
         datetime_grid.set_margin_top(5)
-        datetime_grid.set_margin_bottom(10)  # Adds space before the next section
+        datetime_grid.set_margin_bottom(15)
         vbox.add(datetime_grid)
 
         datetime_12h_label = Label(
@@ -274,6 +272,13 @@ class HyprConfGUI(Window):
         )
         datetime_12h_switch_container.add(self.datetime_12h_switch)
         datetime_grid.attach(datetime_12h_switch_container, 1, 0, 1, 1)
+
+        datetime_show_seconds_label = Label(label="Show Seconds", h_align="start", v_align="center")
+        datetime_grid.attach(datetime_show_seconds_label, 2, 0, 1, 1)
+        datetime_show_seconds_switch_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, halign=Gtk.Align.START, valign=Gtk.Align.CENTER)
+        self.datetime_show_seconds_switch = Gtk.Switch(active=bind_vars.get('datetime_show_seconds', True))
+        datetime_show_seconds_switch_container.add(self.datetime_show_seconds_switch)
+        datetime_grid.attach(datetime_show_seconds_switch_container, 3, 0, 1, 1)
         # END NEW SECTION FOR DATETIME FORMAT
 
         layout_header = Label(markup="<b>Layout Options</b>", h_align="start")
@@ -550,6 +555,14 @@ class HyprConfGUI(Window):
 
         notification_pos_combo_container.add(self.notification_pos_combo)
         layout_grid.attach(notification_pos_combo_container, 1, 8, 3, 1)
+
+        resizable_label = Label(label="Resizable Settings Window (Reopen Required)", h_align="start", v_align="center")
+        layout_grid.attach(resizable_label, 0, 8, 1, 1)
+        resizable_switch_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, halign=Gtk.Align.START, valign=Gtk.Align.CENTER)
+        self.resizable_switch = Gtk.Switch(active=bind_vars.get('settings_window_resizable', False))
+        self.resizable_switch.set_tooltip_text("Allow the settings window to be resized (requires reopening settings window)")
+        resizable_switch_container.add(self.resizable_switch)
+        layout_grid.attach(resizable_switch_container, 1, 8, 3, 1)
 
         separator2 = Box(
             style="min-height: 1px; background-color: alpha(@fg_color, 0.2); margin: 5px 0px;",
@@ -1057,6 +1070,7 @@ class HyprConfGUI(Window):
         current_bind_vars_snapshot["datetime_12h_format"] = (
             self.datetime_12h_switch.get_active()
         )
+        current_bind_vars_snapshot["datetime_show_seconds"] = self.datetime_show_seconds_switch.get_active()
         current_bind_vars_snapshot["dock_enabled"] = self.dock_switch.get_active()
         current_bind_vars_snapshot["dock_always_occluded"] = (
             self.dock_hover_switch.get_active()
@@ -1340,6 +1354,10 @@ class HyprConfGUI(Window):
 
             self.datetime_12h_switch.set_active(
                 settings_utils.bind_vars.get("datetime_12h_format", False)
+            )
+
+            self.datetime_show_seconds_switch.set_active(
+                settings_utils.bind_vars.get("datetime_show_seconds", True)
             )
 
             self.dock_switch.set_active(

@@ -416,6 +416,9 @@ class Dock(Window):
         button.instances = instances
         if instances: button.add_style_class("instance")
 
+        # Add right-click context menu functionality
+        button.connect("button-press-event", self._on_button_press, app_identifier, instances, desktop_app)
+
         button.drag_source_set(
             Gdk.ModifierType.BUTTON1_MASK,
             [Gtk.TargetEntry.new("text/plain", Gtk.TargetFlags.SAME_APP, 0)],
@@ -432,6 +435,115 @@ class Dock(Window):
         button.connect("drag-data-received", self.on_drag_data_received)
         button.connect("enter-notify-event", self._on_child_enter)
         return button
+
+    def _on_button_press(self, widget, event, app_identifier, instances, desktop_app):
+        """Handle button press events for context menu"""
+        if event.button == Gdk.BUTTON_SECONDARY:  # Right click
+            self._show_context_menu(widget, event, app_identifier, instances, desktop_app)
+            return True
+        return False
+
+    def _show_context_menu(self, widget, event, app_identifier, instances, desktop_app):
+        """Show context menu for dock app"""
+        menu = Gtk.Menu()
+        # Check if app is pinned
+        is_pinned = self._is_app_pinned(app_identifier)
+
+        # Pin/Unpin option
+        if is_pinned:
+            pin_item = Gtk.MenuItem(label="Unpin from Dock")
+            pin_item.connect("activate", self._unpin_app, app_identifier)
+        else:
+            pin_item = Gtk.MenuItem(label="Pin to Dock")
+            pin_item.connect("activate", self._pin_app, app_identifier, desktop_app)
+
+        menu.append(pin_item)
+
+        # Add separator if app has running instances
+        if instances:
+            separator = Gtk.SeparatorMenuItem()
+            menu.append(separator)
+
+            # Close option (only for running instances)
+            if len(instances) == 1:
+                close_item = Gtk.MenuItem(label="Close")
+                close_item.connect("activate", self._close_app, instances[0])
+            else:
+                close_item = Gtk.MenuItem(label=f"Close All ({len(instances)} windows)")
+                close_item.connect("activate", self._close_all_app_instances, instances)
+
+            menu.append(close_item)
+
+        menu.show_all()
+        menu.popup_at_pointer(event)
+
+    def _is_app_pinned(self, app_identifier):
+        """Check if an app is currently pinned"""
+        for pinned_app in self.pinned:
+            if isinstance(app_identifier, dict) and isinstance(pinned_app, dict):
+                if app_identifier.get("name") == pinned_app.get("name"):
+                    return True
+            elif app_identifier == pinned_app:
+                return True
+        return False
+
+    def _pin_app(self, menu_item, app_identifier, desktop_app):
+        """Pin an app to the dock"""
+        if self._is_app_pinned(app_identifier): return  # Already pinned
+
+        # Create app data object for pinning
+        if desktop_app:
+            app_data_obj = {
+                "name": desktop_app.name,
+                "display_name": desktop_app.display_name,
+                "window_class": desktop_app.window_class,
+                "executable": desktop_app.executable,
+                "command_line": desktop_app.command_line
+            }
+
+        else:
+            app_data_obj = app_identifier
+
+        # Add to pinned apps
+        self.pinned.append(app_data_obj)
+        self.config["pinned_apps"] = self.pinned
+
+        # Save and update dock
+        if self.update_pinned_apps_file():
+            self.update_dock()
+
+    def _unpin_app(self, menu_item, app_identifier):
+        """Unpin an app from the dock"""
+        # Find and remove the pinned app
+        app_index = -1
+
+        for i, pinned_app in enumerate(self.pinned):
+            if isinstance(app_identifier, dict) and isinstance(pinned_app, dict):
+                if app_identifier.get("name") == pinned_app.get("name"):
+                    app_index = i
+                    break
+            elif app_identifier == pinned_app:
+                app_index = i
+                break
+
+        if app_index >= 0:
+            self.pinned.pop(app_index)
+            self.config["pinned_apps"] = self.pinned
+
+            # Save and update dock
+            if self.update_pinned_apps_file():
+                self.update_dock()
+
+    def _close_app(self, menu_item, instance):
+        """Close a single app instance"""
+        if instance and "address" in instance:
+            exec_shell_command(f"hyprctl dispatch closewindow address:{instance['address']}")
+
+    def _close_all_app_instances(self, menu_item, instances):
+        """Close all instances of an app"""
+        for instance in instances:
+            if instance and "address" in instance:
+                exec_shell_command(f"hyprctl dispatch closewindow address:{instance['address']}")
 
     def handle_app(self, app_identifier, instances, desktop_app=None):
         if not instances:
