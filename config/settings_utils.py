@@ -54,7 +54,7 @@ def ensure_matugen_config():
                     "--transition-step",
                     "255",
                     "--transition-fps",
-                    "60",
+                    "180",
                     "-f",
                     "Nearest",
                 ],
@@ -74,11 +74,46 @@ def ensure_matugen_config():
             "hyprland": {
                 "input_path": f"~/.config/{APP_NAME_CAP}/config/matugen/templates/hyprland-colors.conf",
                 "output_path": f"~/.config/{APP_NAME_CAP}/config/hypr/colors.conf",
+                "post_hook": "hyprctl reload || true",
             },
             f"{APP_NAME}": {
                 "input_path": f"~/.config/{APP_NAME_CAP}/config/matugen/templates/{APP_NAME}.css",
                 "output_path": f"~/.config/{APP_NAME_CAP}/styles/colors.css",
                 "post_hook": f"fabric-cli exec {APP_NAME} 'app.set_css()' &",
+            },
+            "kitty": {
+                "input_path": f"~/.config/{APP_NAME_CAP}/config/matugen/templates/kitty-colors.conf",
+                "output_path": "~/.config/kitty/colors.conf",
+                "post_hook": "kitty @ set-colors --all ~/.config/kitty/colors.conf || true",
+            },
+            "rofi": {
+                "input_path": f"~/.config/{APP_NAME_CAP}/config/matugen/templates/rofi-colors.rasi",
+                "output_path": "~/.config/rofi/colors.rasi"
+            },
+            "gtk4": {
+              "input_path": "~/.config/Ax-Shell/config/matugen/templates/gtk-4.0/gtk.css",
+              "output_path": "~/.config/gtk-4.0/gtk.css"
+            },
+            "gtk3": {
+              "input_path": "~/.config/Ax-Shell/config/matugen/templates/gtk-3.0/gtk.css",
+              "output_path": "~/.config/gtk-3.0/gtk.css"
+            },
+            "qt5ct": {
+              "input_path": "~/.config/Ax-Shell/config/matugen/templates/qt/colors/Matugen.conf",
+              "output_path": "~/.config/qt5ct/colors/Matugen.conf"
+            },
+            "qt6ct": {
+              "input_path": "~/.config/Ax-Shell/config/matugen/templates/qt/colors/Matugen.conf",
+              "output_path": "~/.config/qt6ct/colors/Matugen.conf"
+            },
+            "wlogout": {
+              "input_path": "~/.config/Ax-Shell/config/matugen/templates/wayland/wlogout/colors.css",
+              "output_path": "~/.config/wlogout/colors.css"
+            },
+            "pywalfox": {
+              "input_path": "~/.config/Ax-Shell/config/matugen/templates/wal/colors.json",
+              "output_path": "~/.cache/wal/colors.json",
+              "post_hook": "pywalfox update || true"
             },
         },
     }

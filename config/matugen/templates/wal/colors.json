@@ -1,0 +1,25 @@
+{
+  "special": {
+    "background": "{{ colors.background.default.hex }}",
+    "foreground": "{{ colors.on_background.default.hex }}",
+    "cursor": "{{ colors.on_background.default.hex }}"
+  },
+  "colors": {
+    "color0":  "{{ colors.surface.default.hex }}",
+    "color1":  "{{ colors.red.default.hex }}",
+    "color2":  "{{ colors.green.default.hex }}",
+    "color3":  "{{ colors.yellow.default.hex }}",
+    "color4":  "{{ colors.blue.default.hex }}",
+    "color5":  "{{ colors.magenta.default.hex }}",
+    "color6":  "{{ colors.cyan.default.hex }}",
+    "color7":  "{{ colors.white.default.hex }}",
+    "color8":  "{{ colors.surface_bright.default.hex }}",
+    "color9":  "{{ colors.red.default.hex | set_lightness: 10.0 }}",
+    "color10": "{{ colors.green.default.hex | set_lightness: 10.0 }}",
+    "color11": "{{ colors.yellow.default.hex | set_lightness: 10.0 }}",
+    "color12": "{{ colors.blue.default.hex | set_lightness: 10.0 }}",
+    "color13": "{{ colors.magenta.default.hex | set_lightness: 10.0 }}",
+    "color14": "{{ colors.cyan.default.hex | set_lightness: 10.0 }}",
+    "color15": "{{ colors.white.default.hex | set_lightness: 10.0 }}"
+  }
+}
