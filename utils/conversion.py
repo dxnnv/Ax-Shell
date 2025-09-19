@@ -300,7 +300,7 @@ class Units():
             "mm2": 1e-6,
         }
 
-        # Ya no usamos currency_converter aquí.
+        # We no longer use currency_converter here.
 
 
 class Conversion():
@@ -309,10 +309,10 @@ class Conversion():
 
     def convert(self, value: float, from_type: str, to_type: str):
         """
-        Generalized conversion function que funciona con todas las categorías,
-        incluyendo moneda via floatrates.com.
+        Generalized conversion function that works with all categories,
+        including currency via floatrates.com.
         """
-        # Colección de todos los charts no-monedas
+        # Collection of all non-coin charts
         charts = {
             "WEIGHT_CHART": self.units.WEIGHT_CHART,
             "LENGTH_CHART": self.units.LENGTH_CHART,
@@ -336,10 +336,10 @@ class Conversion():
             "AREA_CHART": self.units.AREA_CHART,
         }
 
-        # 1) Revisar si está en alguno de los charts (no monedas)
+        # 1) Check if it is in any of the charts (not coins)
         for chart_name, chart in charts.items():
             if from_type in chart and to_type in chart:
-                # Temperaturas usan lambdas
+                # Temperatures use lambdas
                 if chart_name == "TEMPERATURE_CHART":
                     if from_type == to_type:
                         return value
@@ -355,24 +355,24 @@ class Conversion():
                     from_kg = chart[to_type][1]
                     return value * to_kg * from_kg
 
-                # Cualquier otro chart numérico
+                # Any other numerical chart
                 if from_type == to_type:
                     return value
                 return value * (chart[from_type] / chart[to_type])
 
-        # 2) Si ambos son códigos de moneda (p. ej. “USD”, “ARS”)
-        #    asumimos que están en mayúsculas y tienen 3 letras.
+        # 2) If both are currency codes (ex.: “USD”, “ARS”)
+        #    We assume that they are capitalized and have 3 letters.
         if len(from_type) == 3 and len(to_type) == 3 and from_type.isalpha() and to_type.isalpha():
             return self._convert_currency_via_floatrates(value, from_type, to_type)
 
-        # 3) Si no cae en ningún caso, error.
+        # 3) If it doesn't fall in any case, error.
         raise ValueError(f"Unsupported conversion: {from_type} to {to_type}")
 
     def _convert_currency_via_floatrates(self, value: float, from_code: str, to_code: str) -> float:
         """
-        Convierte usando el JSON de floatrates.com:
-        - Hace GET a https://www.floatrates.com/daily/{from_lower}.json
-        - Toma el rate de la clave to_lower y multiplica.
+        Convert using JSON from floatrates.com:
+        - GET https://www.floatrates.com/daily/{from_lower}.json
+        - Take the rate from the to_lower key and multiply.
         """
         from_lower = from_code.lower()
         to_lower = to_code.lower()
@@ -383,11 +383,11 @@ class Conversion():
         url = f"https://www.floatrates.com/daily/{from_lower}.json"
         resp = requests.get(url, timeout=5)
         if resp.status_code != 200:
-            raise ValueError(f"Error al obtener datos de floatrates para {from_code}")
+            raise ValueError(f"Error getting floatrates data for {from_code}")
 
         data = resp.json()
         if to_lower not in data:
-            raise ValueError(f"Moneda destino '{to_code}' no encontrada en la respuesta de floatrates para '{from_code}'")
+            raise ValueError(f"Destination currency '{to_code}' not found in floatrates response for '{from_code}'")
 
         rate = data[to_lower]["rate"]
         return value * rate
@@ -396,10 +396,10 @@ class Conversion():
         parts = input.split()
         addition = "s" if parts[-1].endswith("s") else ""
 
-        if "and" in parts:  # valor unidad1 and valor2 unidad2 _ a unidad_destino
+        if "and" in parts:  # value unit1 and value2 unit2 _ to destination_unit
             parts.remove("and")
             if len(parts) != 6:
-                raise ValueError("Formato inválido. Esperado: 'value from_type and value2 from_type2 _ to_type'")
+                raise ValueError("Invalid format. Expected: 'value from_type and value2 from_type2 _ to_type'")
             
             value1, from_type1, value2, from_type2, _, to_type = parts
             value1, value2 = float(value1), float(value2)
@@ -416,7 +416,7 @@ class Conversion():
                 return res, to_type + addition
         else:
             if len(parts) != 4:
-                raise ValueError("Formato inválido. Esperado: 'value from_type _ to_type'")
+                raise ValueError("Invalid format. Expected: 'value from_type _ to_type'")
             value, from_type, _, to_type = parts
             value = float(value)
             from_type = self.clean_type(from_type)
@@ -425,25 +425,26 @@ class Conversion():
 
     def clean_type(self, type: str) -> str:
         """
-        Si es moneda (3 letras), lo pasa a mayúsculas. 
-        Si termina en 's' (y no es 'celsius'), le quita la 's' para 
-        las otras unidades. """
+        If it is currency (3 letters), it is capitalized.. 
+        If it ends in 's' (and is not 'celsius'), remove the 's' to 
+        the other units.
+        """
         if len(type) == 3 and type.isalpha():
             return type.upper()
         if type.endswith("s") and type.lower() != "celsius":
-            # Para las tablas que tienen singular/plural
+            # For tables that have singular/plural
             singular = type[:-1].lower()
-            # Si existe en STORAGE_TYPE_CHART, lo usamos; 
-            # si no, devolvemos singular en minúsculas para otros charts.
+            # If it exists in STORAGE_TYPE_CHART, we use it; 
+            # Otherwise, we return lowercase singular for other charts.
             if singular in self.units.STORAGE_TYPE_CHART:
                 return singular
             return singular.lower()
         return type
 
 
-# Ejemplo rápido de uso:
+# Quick usage example:
 if __name__ == "__main__":
     conv = Conversion()
-    # Convierte 10 USD a ARS:
+    # Convert 10 USD to ARS:
     result, suffix = conv.parse_input_and_convert("10 USD _ ARS")
-    print(f"{result:.2f} {suffix}")  # Ej: "10 USD _ ARS" -> "38754.23 ARS"
+    print(f"{result:.2f} {suffix}")  # Ex: "10 USD _ ARS" -> "38754.23 ARS"

@@ -5,23 +5,22 @@ if [ -z "$XDG_VIDEOS_DIR" ]; then
   XDG_VIDEOS_DIR="$HOME/Videos"
 fi
 
-# Directorio donde se guardarán las grabaciones
+# Directory where the recordings will be saved
 SAVE_DIR="$XDG_VIDEOS_DIR/Recordings"
 mkdir -p "$SAVE_DIR"
 
-# Si ya está corriendo gpu-screen-recorder, se envía SIGINT para detenerlo correctamente
+# If gpu-screen-recorder is already running, SIGINT is sent to stop it gracefully.
 if pgrep -f "gpu-screen-recorder" >/dev/null; then
   pkill -SIGINT -f "gpu-screen-recorder"
 
-  # Espera un momento para asegurarse de que la grabación se haya detenido y el archivo esté listo
+  # Wait a moment to make sure the recording has stopped and the file is ready.
   sleep 1
 
-  # Obtiene el último archivo grabado
+  # Gets the last recorded file
   LAST_VIDEO=$(ls -t "$SAVE_DIR"/*.mp4 2>/dev/null | head -n 1)
 
-  # Notificación con acciones: "View" abre el archivo, "Open folder" abre la carpeta
-  ACTION=$(notify-send -a "Ax-Shell" "⬜ Recording stopped" \
-    -A "view=View" -A "open=Open folder")
+  # Notification with actions: "View" opens the file, "Open folder" opens the folder
+  ACTION=$(notify-send -a "Ax-Shell" "⬜ Recording stopped" -A "view=View" -A "open=Open folder")
 
   if [ "$ACTION" = "view" ] && [ -n "$LAST_VIDEO" ]; then
     xdg-open "$LAST_VIDEO"
@@ -31,9 +30,9 @@ if pgrep -f "gpu-screen-recorder" >/dev/null; then
   exit 0
 fi
 
-# Nombre del archivo de salida para la nueva grabación
+# Output file name for the new recording
 OUTPUT_FILE="$SAVE_DIR/$(date +%Y-%m-%d-%H-%M-%S).mp4"
 
-# Iniciar la grabación
+# Start recording
 notify-send -a "Ax-Shell" "🔴 Recording started"
 gpu-screen-recorder -w screen -q ultra -a default_output -ac opus -cr full -f 60 -o "$OUTPUT_FILE"

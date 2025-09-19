@@ -1,4 +1,4 @@
-/* === Botones Base === */
+/* === Buttons Base === */
 #night-mode-button,
 #caffeine-button {
   min-height: 52px;
@@ -6,7 +6,7 @@
   transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Tamaños y estilos específicos */
+/* Specific sizes and styles */
 
 #night-mode-button,
 #caffeine-button {
@@ -21,19 +21,19 @@
 }
 
 
-/* Estados Hover para todos los botones relevantes */
+/* Hover states for all relevant buttons */
 #night-mode-button:hover,
 #caffeine-button:hover {
   background-color: var(--foreground);
 }
 
-/* Estados Disabled */
+/* Disabled States */
 #night-mode-button.disabled:hover,
 #caffeine-button.disabled:hover {
   background-color: var(--surface-bright);
 }
 
-/* === Estilos de Iconos === */
+/* === Icon Styles === */
 #night-mode-icon,
 #caffeine-icon {
   color: var(--shadow);
@@ -45,7 +45,7 @@
   color: var(--outline);
 }
 
-/* === Estilos de Etiquetas Principales === */
+/* === Main Label Styles === */
 #night-mode-label,
 #caffeine-label {
   color: var(--shadow);
@@ -59,7 +59,7 @@
   color: var(--outline);
 }
 
-/* === Estilos de Texto de Estado === */
+/* === Status Text Styles === */
 #night-mode-status,
 #caffeine-status {
   color: var(--surface-bright);

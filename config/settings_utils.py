@@ -12,14 +12,12 @@ gi.require_version("Gtk", "3.0")
 from fabric.utils.helpers import exec_shell_command_async
 from gi.repository import GLib
 
-# Importar settings_constants para DEFAULTS
+# Import settings_constants for DEFAULTS
 from . import settings_constants
-from .data import (  # CONFIG_DIR, HOME_DIR no se usan aquí directamente
-    APP_NAME, APP_NAME_CAP)
+from .data import (APP_NAME, APP_NAME_CAP) # CONFIG_DIR, HOME_DIR are not used here directly
 
 # Global variable to store binding variables, managed by this module
-bind_vars = {}  # Se inicializa vacío, load_bind_vars lo poblará
-
+bind_vars = {}  # It is initialized as empty, load_bind_vars will populate it
 
 def deep_update(target: dict, update: dict) -> dict:
     """
@@ -28,13 +26,13 @@ def deep_update(target: dict, update: dict) -> dict:
     """
     for key, value in update.items():
         if isinstance(value, dict) and key in target and isinstance(target[key], dict):
-            # Si el valor es un diccionario y la clave ya existe en target como diccionario,
-            # entonces actualiza recursivamente.
+            # If the value is a dictionary and the key already exists in target as a dictionary,
+            # then update recursively.
             deep_update(target[key], value)
         else:
-            # De lo contrario, simplemente establece/sobrescribe el valor.
+            # Otherwise, it simply sets/overwrites the value.
             target[key] = value
-    return target  # Aunque modifica in-place, devolverlo es una convención común
+    return target  # Although modifying in-place, returning it is a common convention
 
 
 def ensure_matugen_config():
@@ -95,24 +93,22 @@ def ensure_matugen_config():
                 existing_config = toml.load(f)
             shutil.copyfile(config_path, config_path + ".bak")
         except toml.TomlDecodeError:
-            print(
-                f"Warning: Could not decode TOML from {config_path}. A new default config will be created."
-            )
-            existing_config = {}  # Resetear si está corrupto
+            print(f"Warning: Could not decode TOML from {config_path}. A new default config will be created.")
+            existing_config = {}  # Reset if corrupted
         except Exception as e:
             print(f"Error reading or backing up {config_path}: {e}")
-            # existing_config podría estar parcialmente cargado o vacío.
-            # Continuar para intentar fusionar con defaults.
+            # existing_config might be partially loaded or empty.
+            # Continue to attempt to merge with defaults.
 
-    # Usamos una copia de existing_config para deep_update si no queremos modificarlo directamente
-    # o asegurarse que deep_update no lo haga si no es deseado.
-    # La implementación actual de deep_update modifica 'target'.
-    # Para ser más seguros, podemos pasar una copia si existing_config no debe cambiar.
+    # We use a copy of existing_config for deep_update if we don't want to modify it directly.
+    # Or make sure that deep_update doesn't do so if unwanted.
+    # The current implementation of deep_update modifies 'target'.
+    # To be extra safe, we can pass a copy if existing_config shouldn't change.
     # merged_config = deep_update(existing_config.copy(), expected_config)
-    # O si existing_config puede ser modificado:
+    # Or if existing_config can be modified:
     merged_config = deep_update(
         existing_config, expected_config
-    )  # existing_config se modifica in-place
+    )  # existing_config is modified in-place
 
     try:
         with open(config_path, "w") as f:
@@ -121,9 +117,7 @@ def ensure_matugen_config():
         print(f"Error writing matugen config to {config_path}: {e}")
 
     current_wall = os.path.expanduser("~/.current.wall")
-    hypr_colors = os.path.expanduser(
-        f"~/.config/{APP_NAME_CAP}/config/hypr/colors.conf"
-    )
+    hypr_colors = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/config/hypr/colors.conf")
     css_colors = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/styles/colors.css")
 
     if (
@@ -136,15 +130,11 @@ def ensure_matugen_config():
 
         image_path = ""
         if not os.path.exists(current_wall):
-            example_wallpaper_path = os.path.expanduser(
-                f"~/.config/{APP_NAME_CAP}/assets/wallpapers_example/example-1.jpg"
-            )
+            example_wallpaper_path = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/assets/wallpapers_example/example-1.jpg")
             if os.path.exists(example_wallpaper_path):
                 try:
-                    # Si ya existe (posiblemente un enlace roto o archivo regular), eliminar y re-enlazar
-                    if os.path.lexists(
-                        current_wall
-                    ):  # lexists para no seguir el enlace si es uno
+                    # If it already exists (possibly a broken link or regular file), delete and re-link
+                    if os.path.lexists(current_wall):  # lexists to not follow the link if it is one
                         os.remove(current_wall)
                     os.symlink(example_wallpaper_path, current_wall)
                     image_path = example_wallpaper_path
@@ -168,13 +158,9 @@ def ensure_matugen_config():
             except Exception as e:
                 print(f"Error initiating matugen: {e}")
         elif not image_path:
-            print(
-                "Warning: No wallpaper path determined to generate matugen theme from."
-            )
-        else:  # image_path existe pero el archivo no
-            print(
-                f"Warning: Wallpaper at {image_path} not found. Cannot generate matugen theme."
-            )
+            print("Warning: No wallpaper path determined to generate matugen theme from.")
+        else:  # image_path exists but the file does not
+            print(f"Warning: Wallpaper at {image_path} not found. Cannot generate matugen theme.")
 
 
 def load_bind_vars():
@@ -182,52 +168,46 @@ def load_bind_vars():
     Load saved key binding variables from JSON, if available.
     Populates the global `bind_vars` in-place.
     """
-    global bind_vars  # Necesario para modificar el objeto global bind_vars
+    global bind_vars  # Required to modify the global bind_vars object
 
-    # 1. Limpiar el diccionario bind_vars existente.
+    # 1. Clear the existing bind_vars dictionary.
     bind_vars.clear()
-    # 2. Actualizarlo con una copia de DEFAULTS.
-    bind_vars.update(
-        settings_constants.DEFAULTS.copy()
-    )  # Usar .copy() para no modificar DEFAULTS accidentalmente
+    # 2. Update it with a copy of DEFAULTS.
+    bind_vars.update(settings_constants.DEFAULTS.copy())  # Use .copy() to avoid accidentally modifying DEFAULTS
 
     config_json = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/config/config.json")
     if os.path.exists(config_json):
         try:
             with open(config_json, "r") as f:
                 saved_vars = json.load(f)
-                # 3. Usar deep_update para fusionar saved_vars en el bind_vars existente.
+                # 3. Use deep_update to merge saved_vars into the existing bind_vars.
                 deep_update(bind_vars, saved_vars)
 
-                # La lógica para asegurar la estructura de diccionarios anidados
-                # como 'metrics_visible' y 'metrics_small_visible'
-                # debe operar sobre el 'bind_vars' ya actualizado.
+                # The logic for securing the structure of nested dictionaries
+                # such as 'metrics_visible' and 'metrics_small_visible'
+                # must operate on the already updated 'bind_vars'.
                 for vis_key in ["metrics_visible", "metrics_small_visible"]:
-                    # Asegurar que la clave exista en DEFAULTS como referencia de estructura
+                    # Ensure the key exists in DEFAULTS as a structure reference
                     if vis_key in settings_constants.DEFAULTS:
                         default_sub_dict = settings_constants.DEFAULTS[vis_key]
-                        # Si la clave no está en bind_vars o no es un diccionario después de deep_update,
-                        # restaurarla desde una copia de DEFAULTS para esa clave.
+                        # If the key is not in bind_vars or is not a dictionary after deep_update,
+                        # restore it from a copy of DEFAULTS for that key.
                         if not isinstance(bind_vars.get(vis_key), dict):
                             bind_vars[vis_key] = default_sub_dict.copy()
                         else:
-                            # Si es un diccionario, asegurar que todas las sub-claves de DEFAULTS estén presentes.
+                            # If it is a dictionary, ensure that all sub-keys of DEFAULTS are present.
                             current_sub_dict = bind_vars[vis_key]
                             for m_key, m_val in default_sub_dict.items():
                                 if m_key not in current_sub_dict:
                                     current_sub_dict[m_key] = m_val
         except json.JSONDecodeError:
-            print(
-                f"Warning: Could not decode JSON from {config_json}. Using defaults (already initialized)."
-            )
-            # bind_vars ya está poblado con DEFAULTS, no se necesita acción adicional aquí.
+            print(f"Warning: Could not decode JSON from {config_json}. Using defaults (already initialized).")
+            # bind_vars is already populated with DEFAULTS, no further action is needed here.
         except Exception as e:
-            print(
-                f"Error loading config from {config_json}: {e}. Using defaults (already initialized)."
-            )
-            # bind_vars ya está poblado con DEFAULTS.
+            print(f"Error loading config from {config_json}: {e}. Using defaults (already initialized).")
+            # bind_vars is already populated with DEFAULTS.
     # else:
-    # Si config_json no existe, bind_vars ya está poblado con DEFAULTS.
+    # If config_json does not exist, bind_vars is already populated with DEFAULTS.
     # print(f"Config file {config_json} not found. Using defaults (already initialized).")
 
 
@@ -322,9 +302,7 @@ def ensure_face_icon():
     Ensure the face icon exists. If not, copy the default icon.
     """
     face_icon_path = os.path.expanduser("~/.face.icon")
-    default_icon_path = os.path.expanduser(
-        f"~/.config/{APP_NAME_CAP}/assets/default.png"
-    )
+    default_icon_path = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/assets/default.png")
     if not os.path.exists(face_icon_path) and os.path.exists(default_icon_path):
         try:
             shutil.copy(default_icon_path, face_icon_path)
@@ -339,13 +317,11 @@ def backup_and_replace(src: str, dest: str, config_name: str):
     try:
         if os.path.exists(dest):
             backup_path = dest + ".bak"
-            # Asegurarse que el directorio de backup existe si es diferente
+            # Make sure the backup directory exists if it is different
             # os.makedirs(os.path.dirname(backup_path), exist_ok=True)
             shutil.copy(dest, backup_path)
             print(f"{config_name} config backed up to {backup_path}")
-        os.makedirs(
-            os.path.dirname(dest), exist_ok=True
-        )  # Ensure dest directory exists
+        os.makedirs(os.path.dirname(dest), exist_ok=True)  # Ensure dest directory exists
         shutil.copy(src, dest)
         print(f"{config_name} config replaced from {src}")
     except Exception as e:
@@ -364,7 +340,7 @@ def start_config():
 
     hypr_config_dir = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/config/hypr/")
     os.makedirs(hypr_config_dir, exist_ok=True)
-    # Usar APP_NAME para el nombre del archivo .conf para que coincida con SOURCE_STRING corregido
+    # Using APP_NAME for .conf file name to match SOURCE_STRING fixed
     hypr_conf_path = os.path.join(hypr_config_dir, f"{APP_NAME}.conf")
     try:
         with open(hypr_conf_path, "w") as f:
@@ -377,18 +353,12 @@ def start_config():
     print(f"{time.time():.4f}: start_config: Initiating hyprctl reload...")
     try:
         # subprocess.run(["hyprctl", "reload"], check=True, capture_output=True, text=True)
-        exec_shell_command_async("hyprctl reload")  # Mantener async para no bloquear
-        print(
-            f"{time.time():.4f}: start_config: Hyprland configuration reload initiated."
-        )
+        exec_shell_command_async("hyprctl reload")  # Keep async to avoid blocking
+        print(f"{time.time():.4f}: start_config: Hyprland configuration reload initiated.")
     except FileNotFoundError:
         print("Error: hyprctl command not found. Cannot reload Hyprland.")
-    except (
-        subprocess.CalledProcessError
-    ) as e:  # Si usáramos subprocess.run con check=True
-        print(
-            f"Error reloading Hyprland with hyprctl: {e}\nOutput:\n{e.stdout}\n{e.stderr}"
-        )
+    except (subprocess.CalledProcessError) as e:  # If we used subprocess.run with check=True
+        print(f"Error reloading Hyprland with hyprctl: {e}\nOutput:\n{e.stdout}\n{e.stderr}")
     except Exception as e:
         print(f"An error occurred initiating hyprctl reload: {e}")
     print(f"{time.time():.4f}: start_config: Finished initiating hyprctl reload.")

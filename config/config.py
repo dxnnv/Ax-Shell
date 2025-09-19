@@ -2,12 +2,11 @@ import os
 import sys
 from pathlib import Path
 
-
 def _configure_sys_path_for_direct_execution():
     """
-    Ajusta sys.path si este script se ejecuta directamente,
-    para asegurar que las importaciones relativas dentro del paquete 'config' funcionen.
-    Esto permite ejecutar `python config/config.py` desde cualquier directorio.
+    Adjust sys.path if this script is run directly,
+    to ensure that relative imports within the 'config' package work.
+    This allows you to run `python config/config.py` from any directory.
     """
     if __name__ == "__main__":
         current_file_dir = Path(__file__).resolve().parent
@@ -19,7 +18,6 @@ def _configure_sys_path_for_direct_execution():
 _configure_sys_path_for_direct_execution()
 
 import shutil
-
 from fabric import Application
 
 if __name__ == "__main__" and not __package__:

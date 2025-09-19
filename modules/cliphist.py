@@ -197,12 +197,10 @@ class ClipHistory(Box):
         for i in range(start, end):
             item = items[i]
             self.viewport.add(self.create_clipboard_item(item))
-        
 
         if end < len(items):
             GLib.idle_add(self._display_items_batch, items, end, batch_size)
         else:
-
             if self.search_entry.get_text() and self.viewport.get_children():
                 self.update_selection(0)
 
@@ -212,17 +210,12 @@ class ClipHistory(Box):
         parts = item.split('\t', 1)
         item_id = parts[0] if len(parts) > 1 else "0"
         content = parts[1] if len(parts) > 1 else item
-        
 
         display_text = content.strip()
         if len(display_text) > 100:
             display_text = display_text[:97] + "..."
         
-
-        is_image = self.is_image_data(content)
-        
-        if is_image:
-
+        if self.is_image_data(content):
             button = Button(
                 name="slot-button",
                 child=Box(
@@ -247,7 +240,6 @@ class ClipHistory(Box):
 
             self._load_image_preview_async(item_id, button)
         else:
-
             button = self.create_text_item_button(item_id, display_text)
         
 

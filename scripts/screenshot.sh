@@ -40,7 +40,7 @@ case $1 in
 esac
 
 if [ -f "$full_path" ]; then
-    # Copiar al portapapeles si no es mockup
+    # Copy to clipboard if not a mockup
     if [ "$mockup_mode" != "mockup" ]; then
         if command -v wl-copy >/dev/null 2>&1; then
             wl-copy < "$full_path"
@@ -49,13 +49,13 @@ if [ -f "$full_path" ]; then
         fi
     fi
 
-    # Procesar mockup
+    # Process mockup
     if [ "$mockup_mode" = "mockup" ]; then
         temp_file="${full_path%.png}_temp.png"
         mockup_file="${full_path%.png}_mockup.png"
         mockup_success=true
 
-        # Redondear esquinas y transparencia
+        # Round corners and transparency
         if [ "$mockup_success" = true ]; then
             magick "$full_path" \
                 \( +clone -alpha extract -draw 'fill black polygon 0,0 0,20 20,0 fill white circle 20,20 20,0' \
@@ -64,7 +64,7 @@ if [ -f "$full_path" ]; then
                 \) -alpha off -compose CopyOpacity -composite "$temp_file" || mockup_success=false
         fi
 
-        # Añadir sombra
+        # Add shadow
         if [ "$mockup_success" = true ]; then
             magick "$temp_file" \
                 \( +clone -background black -shadow 60x20+0+10 -alpha set -channel A -evaluate multiply 1 +channel \) \
