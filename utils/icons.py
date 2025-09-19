@@ -485,11 +485,6 @@ icons = {
         },
         "mixer": "mixer-symbolic",
     },
-    "powerprofile": {
-        "balanced": "power-profile-balanced-symbolic",
-        "power-saver": "power-profile-power-saver-symbolic",
-        "performance": "power-profile-performance-symbolic",
-    },
     "battery": {
         "charging": "battery-flash-symbolic",
         "warning": "battery-empty-symbolic",

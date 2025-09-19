@@ -66,7 +66,6 @@ curl -fsSL https://raw.githubusercontent.com/Axenide/Ax-Shell/main/install.sh | 
     - `brightnessctl`
     - `cava`
     - `cliphist`
-    - `gnome-bluetooth-3.0`
     - `gobject-introspection`
     - `gpu-screen-recorder`
     - `grimblast`
@@ -84,7 +83,6 @@ curl -fsSL https://raw.githubusercontent.com/Axenide/Ax-Shell/main/install.sh | 
     - `swww`
     - `tesseract`
     - `tmux`
-    - `upower`
     - `uwsm`
     - `vte3`
     - `webp-pixbuf-loader`

@@ -18,8 +18,7 @@ import config.data as data
 import modules.icons as icons
 from modules.controls import ControlSmall
 from modules.dock import Dock
-from modules.metrics import Battery, MetricsSmall
-from modules.systemprofiles import Systemprofiles
+from modules.metrics import MetricsSmall
 from modules.systemtray import SystemTray
 from modules.weather import Weather
 from widgets.wayland import WaylandWindow as Window
@@ -192,7 +191,6 @@ class Bar(Window):
         self.systray = SystemTray()
 
         self.weather = Weather()
-        self.sysprofiles = Systemprofiles()
 
         self.lang_label = Label(name="lang-label")
         self.language = Button(
@@ -251,7 +249,6 @@ class Bar(Window):
 
         self.control = ControlSmall()
         self.metrics = MetricsSmall()
-        self.battery = Battery()
 
         self.apply_component_props()
 
@@ -279,10 +276,7 @@ class Bar(Window):
             ],
         )
 
-        self.rev_left = [
-            self.weather,
-            self.sysprofiles,
-        ]
+        self.rev_left = [ self.weather ]
 
         self.revealer_left = Revealer(
             name="bar-revealer",
@@ -312,7 +306,6 @@ class Bar(Window):
 
         self.h_end_children = [
             self.boxed_revealer_right,
-            self.battery,
             self.systray,
             self.button_tools,
             self.language,
@@ -324,7 +317,6 @@ class Bar(Window):
             self.button_apps,
             self.systray,
             self.control,
-            self.sysprofiles,
             self.button_tools,
         ]
 
@@ -335,7 +327,6 @@ class Bar(Window):
         ]
 
         self.v_end_children = [
-            self.battery,
             self.metrics,
             self.language,
             self.date_time,
@@ -434,7 +425,6 @@ class Bar(Window):
             self.date_time,
             self.ws_container,
             self.weather,
-            self.battery,
             self.metrics,
             self.systray,
             self.control,
@@ -510,12 +500,10 @@ class Bar(Window):
             "button_overview": self.button_overview,
             "ws_container": self.ws_container,
             "weather": self.weather,
-            "battery": self.battery,
             "metrics": self.metrics,
             "language": self.language,
             "date_time": self.date_time,
             "button_power": self.button_power,
-            "sysprofiles": self.sysprofiles,
         }
 
         for component_name, widget in components.items():
@@ -531,12 +519,10 @@ class Bar(Window):
             "button_overview": self.button_overview,
             "ws_container": self.ws_container,
             "weather": self.weather,
-            "battery": self.battery,
             "metrics": self.metrics,
             "language": self.language,
             "date_time": self.date_time,
             "button_power": self.button_power,
-            "sysprofiles": self.sysprofiles,
         }
 
         if component_name in components and component_name in self.component_visibility:

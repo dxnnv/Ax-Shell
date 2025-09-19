@@ -25,7 +25,6 @@ PACKAGES=(
   nvtop
   openresolv
   playerctl
-  power-profiles-daemon
   python-dateutil
   python-fabric-git
   python-gobject
@@ -45,7 +44,6 @@ PACKAGES=(
   tmux
   ttf-nerd-fonts-symbols-mono
   unzip
-  upower
   uwsm
   vte3
   webp-pixbuf-loader

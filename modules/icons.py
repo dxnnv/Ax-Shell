@@ -58,19 +58,6 @@ logout: str = "&#xeba8;"
 reboot: str = "&#xeb13;"
 shutdown: str = "&#xeb0d;"
 
-# Power Manager
-power_saving: str = "&#xed4f;"
-power_balanced: str = "&#xfa77;"
-power_performance: str = "&#xec45;"
-charging: str = "&#xefef;"
-discharging: str = "&#xefe9;"
-alert: str = "&#xea06;"
-bat_charging: str = "&#xeeca;"
-bat_discharging: str = "&#xf0a1;"
-bat_low: str = "&#xff1d;"
-bat_full: str = "&#xea38;"
-
-
 # Applets
 wifi_0: str = "&#xeba3;"
 wifi_1: str = "&#xeba4;"

@@ -17,14 +17,13 @@ from fabric.widgets.scale import Scale
 from gi.repository import GLib
 
 import config.data as data
-from modules.upower.upower import UPowerManager
 import modules.icons as icons
 
 logger = logging.getLogger(__name__)
 
 class MetricsProvider:
     """
-    Class responsible for obtaining centralized CPU, memory, disk usage, and battery metrics.
+    Class responsible for obtaining centralized CPU, memory, and disk usage metrics.
     It updates periodically so that all widgets querying it display the same values.
     """
     def __init__(self):
@@ -32,13 +31,6 @@ class MetricsProvider:
         self.cpu = 0.0
         self.mem = 0.0
         self.disk = []
-
-        self.upower = UPowerManager()
-        self.display_device = self.upower.get_display_device()
-        self.bat_percent = 0.0
-        self.bat_charging = None
-        self.bat_time = 0
-
         self._gpu_update_running = False
 
         GLib.timeout_add_seconds(1, self._update)
@@ -50,16 +42,6 @@ class MetricsProvider:
 
         if not self._gpu_update_running:
             self._start_gpu_update_async()
-
-        battery = self.upower.get_full_device_information(self.display_device)
-        if battery is None:
-            self.bat_percent = 0.0
-            self.bat_charging = None
-            self.bat_time = 0
-        else:
-            self.bat_percent = battery['Percentage']
-            self.bat_charging = battery['State'] == 1
-            self.bat_time = battery['TimeToFull'] if self.bat_charging else battery['TimeToEmpty']
 
         return True
 
@@ -148,9 +130,6 @@ class MetricsProvider:
 
     def get_metrics(self):
         return (self.cpu, self.mem, self.disk, self.gpu)
-
-    def get_battery(self):
-        return (self.bat_percent, self.bat_charging, self.bat_time)
 
     def get_gpu_info(self):
         try:
@@ -357,7 +336,7 @@ class MetricsSmall(Button):
         self.hover_counter = 0
 
     def _format_percentage(self, value: int) -> str:
-        """Formato natural del porcentaje sin forzar ancho fijo."""
+        """Natural percentage format without forcing fixed width."""
         return f"{value}%"
 
     def on_mouse_enter(self, widget, event):
@@ -424,136 +403,3 @@ class MetricsSmall(Button):
         self.set_tooltip_markup((" - " if not data.VERTICAL else "\n").join([v.markup() for v in tooltip_metrics]))
 
         return True
-
-class Battery(Button):
-    def __init__(self, **kwargs):
-        super().__init__(name="metrics-small", **kwargs)
-
-        main_box = Box(
-
-            spacing=0,
-            orientation="h",
-            visible=True,
-            all_visible=True,
-        )
-
-        self.bat_icon = Label(name="metrics-icon", markup=icons.battery)
-        self.bat_circle = CircularProgressBar(
-            name="metrics-circle",
-            value=0,
-            size=28,
-            line_width=2,
-            start_angle=150,
-            end_angle=390,
-            style_classes="bat",
-            child=self.bat_icon,
-        )
-        self.bat_level = Label(name="metrics-level", style_classes="bat", label="100%")
-        self.bat_revealer = Revealer(
-            name="metrics-bat-revealer",
-            transition_duration=250,
-            transition_type="slide-left",
-            child=self.bat_level,
-            child_revealed=False,
-        )
-        self.bat_box = Box(
-            name="metrics-bat-box",
-            orientation="h",
-            spacing=0,
-            children=[self.bat_circle, self.bat_revealer],
-        )
-
-        main_box.add(self.bat_box)
-
-        self.add(main_box)
-
-        self.connect("enter-notify-event", self.on_mouse_enter)
-        self.connect("leave-notify-event", self.on_mouse_leave)
-
-        self.batt_fabricator = Fabricator(
-            poll_from=lambda v: shared_provider.get_battery(),
-            on_changed=lambda f, v: self.update_battery,
-            interval=1000,
-            stream=False,
-            default_value=0
-        )
-        self.batt_fabricator.changed.connect(self.update_battery)
-        GLib.idle_add(self.update_battery, None, shared_provider.get_battery())
-
-        self.hide_timer = None
-        self.hover_counter = 0
-
-    def _format_percentage(self, value: int) -> str:
-        """Formato natural del porcentaje sin forzar ancho fijo."""
-        return f"{value}%"
-
-    def on_mouse_enter(self, widget, event):
-        if not data.VERTICAL:
-            self.hover_counter += 1
-            if self.hide_timer is not None:
-                GLib.source_remove(self.hide_timer)
-                self.hide_timer = None
-
-            self.bat_revealer.set_reveal_child(True)
-            return False
-
-    def on_mouse_leave(self, widget, event):
-        if not data.VERTICAL:
-            if self.hover_counter > 0:
-                self.hover_counter -= 1
-            if self.hover_counter == 0:
-                if self.hide_timer is not None:
-                    GLib.source_remove(self.hide_timer)
-                self.hide_timer = GLib.timeout_add(500, self.hide_revealer)
-            return False
-
-    def hide_revealer(self):
-        if not data.VERTICAL:
-            self.bat_revealer.set_reveal_child(False)
-            self.hide_timer = None
-            return False
-
-    def update_battery(self, sender, battery_data):
-        value, charging, time = battery_data
-        if value == 0:
-            self.set_visible(False)
-        else:
-            self.set_visible(True)
-            self.bat_circle.set_value(value / 100)
-        percentage = int(value)
-        self.bat_level.set_label(self._format_percentage(percentage))
-
-        if percentage <= 15:
-            self.bat_icon.add_style_class("alert")
-            self.bat_circle.add_style_class("alert")
-        else:
-            self.bat_icon.remove_style_class("alert")
-            self.bat_circle.remove_style_class("alert")
-
-        if time < 60:
-            time_status = f"{int(time)}sec"
-        elif time < 60 * 60:
-            time_status = f"{int(time / 60)}min"
-        else:
-            time_status = f"{int(time / 60 / 60)}h"
-
-        if percentage == 100 and charging == False:
-            self.bat_icon.set_markup(icons.battery)
-            charging_status = f"{icons.bat_full} Fully Charged - {time_status} left"
-        elif percentage == 100 and charging == True:
-            self.bat_icon.set_markup(icons.battery)
-            charging_status = f"{icons.bat_full} Fully Charged"
-        elif charging == True:
-            self.bat_icon.set_markup(icons.charging)
-            charging_status = f"{icons.bat_charging} Charging - {time_status} left"
-        elif percentage <= 15 and charging == False:
-            self.bat_icon.set_markup(icons.alert)
-            charging_status = f"{icons.bat_low} Low Battery - {time_status} left"
-        elif charging == False:
-            self.bat_icon.set_markup(icons.discharging)
-            charging_status = f"{icons.bat_discharging} Discharging - {time_status} left"
-        else:
-            self.bat_icon.set_markup(icons.battery)
-            charging_status = "Battery"
-
-        self.set_tooltip_markup(f"{charging_status}" if not data.VERTICAL else f"{charging_status}: {percentage}%")

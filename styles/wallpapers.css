@@ -26,9 +26,9 @@
   background-color: var(--surface-bright);
 }
 
-#search-entry-walls {
-  /* min-width: 512px; */
-}
+/* #search-entry-walls {
+  min-width: 512px;
+} */
 
 /* Customize the overall switch appearance */
 #matugen-switcher,
