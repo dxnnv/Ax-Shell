@@ -38,7 +38,7 @@
   color: var(--primary);
 }
 
-/* —————— Reemplazo de #player-btn-label —————— */
+/* —————— Replacement of #player-btn-label —————— */
 #player-btn label {
   font-size: 16px;
   color: var(--foreground);
@@ -49,7 +49,7 @@
   color: var(--shadow);
 }
 
-/* —————— Botón —————— */
+/* —————— Button —————— */
 #player-btn {
   padding: 4px;
   transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);

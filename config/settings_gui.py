@@ -941,7 +941,7 @@ class HyprConfGUI(Window):
         return scrolled_window
 
     def _add_disk_entry_widget(self, path):
-        """Helper para añadir una fila de entrada de disco al Box disk_entries."""
+        """Helper to add a disk entry row to the Box disk_entries."""
         bar = Box(orientation="h", spacing=10, h_align="start")
         entry = Entry(text=path, h_expand=True)
         bar.add(entry)
@@ -1357,7 +1357,7 @@ class HyprConfGUI(Window):
             )
 
             self.datetime_show_seconds_switch.set_active(
-                settings_utils.bind_vars.get("datetime_show_seconds", True)
+                settings_utils.bind_vars.get("datetime_show_seconds", False)
             )
 
             self.dock_switch.set_active(

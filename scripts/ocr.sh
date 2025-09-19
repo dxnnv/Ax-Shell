@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-# Captura con hyprshot (selección de región) y envía imagen RAW a stdout
+# Capture with hyprshot (region selection) and send RAW image to stdout
 ocr_text=$(hyprshot -m region -z -r -s | tesseract -l eng - - 2>/dev/null)
 
-# Comprueba si Tesseract devolvió algo
+# Check if Tesseract returned anything
 if [[ -n "$ocr_text" ]]; then
-    # Copia el texto reconocido al portapapeles
+    # Copy the recognized text to the clipboard
     echo -n "$ocr_text" | wl-copy
     notify-send -a "Ax-Shell" "OCR Success" "Text Copied to Clipboard"
 else
