@@ -121,7 +121,7 @@
   font-size: 16px;
 }
 
-/* Label colors por recurso */
+/* Label colors per resource */
 #gpu-label,
 #cpu-label {
   color: var(--primary);
