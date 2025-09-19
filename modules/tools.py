@@ -367,7 +367,7 @@ class Toolbox(Box):
         """Background thread to check gamemode status"""
         try:
             result = subprocess.run(f"bash {GAMEMODE_SCRIPT} check", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            enabled = result.stdout == b't\n'
+            enabled = result.stdout == b'true\n'
         except Exception:
             enabled = False
 
