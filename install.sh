@@ -23,8 +23,10 @@ PACKAGES=(
   matugen-bin
   noto-fonts-emoji
   nvtop
+  openresolv
   playerctl
   power-profiles-daemon
+  python-dateutil
   python-fabric-git
   python-gobject
   python-ijson
@@ -35,6 +37,7 @@ PACKAGES=(
   python-requests
   python-setproctitle
   python-toml
+  python-tzlocal
   python-watchdog
   swappy
   swww-git
