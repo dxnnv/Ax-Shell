@@ -2,6 +2,7 @@ import json
 import os
 
 import gi
+from aiofiles import stderr
 
 gi.require_version("Gtk", "3.0")
 from fabric.utils.helpers import get_relative_path
@@ -9,20 +10,20 @@ from gi.repository import Gdk, GLib
 
 APP_NAME = "ax-shell"
 APP_NAME_CAP = "Ax-Shell"
-
+LOG_LEVEL = "INFO"
 
 PANEL_POSITION_KEY = "panel_position"
 PANEL_POSITION_DEFAULT = "Center"
 NOTIF_POS_KEY = "notif_pos"
 NOTIF_POS_DEFAULT = "Top"
 
-CACHE_DIR = str(GLib.get_user_cache_dir()) + f"/{APP_NAME}"
+CACHE_DIR = f"{GLib.get_user_cache_dir()}/{APP_NAME}"
 
 USERNAME = os.getlogin()
 HOSTNAME = os.uname().nodename
 HOME_DIR = os.path.expanduser("~")
 
-CONFIG_DIR = os.path.expanduser(f"~/.config/{APP_NAME}")
+CONFIG_DIR = f"{HOME_DIR}/.config/{APP_NAME_CAP}"
 
 screen = Gdk.Screen.get_default()
 CURRENT_WIDTH = screen.get_width()
@@ -31,6 +32,7 @@ CURRENT_HEIGHT = screen.get_height()
 
 WALLPAPERS_DIR_DEFAULT = get_relative_path("../assets/wallpapers_example")
 CONFIG_FILE = get_relative_path("../config/config.json")
+DEFAULT_CONFIG_PATH = f"{CONFIG_DIR}/config/config.json"
 MATUGEN_STATE_FILE = os.path.join(CONFIG_DIR, "matugen")
 
 
@@ -40,35 +42,28 @@ BAR_THEME = "Pills"
 DOCK_THEME = "Pills"
 
 PANEL_THEME = "Notch"
-DATETIME_12H_FORMAT = False  # Default value if config file doesn't exist
+DATETIME_12H_FORMAT = False
 DATETIME_SHOW_SECONDS = False
 
-def load_config():
+def load_config(config_path = DEFAULT_CONFIG_PATH):
     """Load the configuration from config.json"""
-    config_path = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/config/config.json")
-    config = {}
+    lconfig = {}
 
     if os.path.exists(config_path):
         try:
             with open(config_path, "r") as f:
-                config = json.load(f)
+                lconfig = json.load(f)
         except Exception as e:
-            print(f"Error loading config: {e}")
+            stderr.write(f"Unable to load config: {e}")
 
-    return config
+    return lconfig
 
 
 # Import defaults from settings_constants to avoid duplication
 from .settings_constants import DEFAULTS
 
 # Load configuration once and use throughout the module
-config = {}
-if os.path.exists(CONFIG_FILE):
-    try:
-        with open(CONFIG_FILE, "r") as f:
-            config = json.load(f)
-    except Exception as e:
-        print(f"Error loading config file: {e}")
+config = load_config(CONFIG_FILE)
 
 # Set configuration values using defaults from settings_constants
 WALLPAPERS_DIR = config.get("wallpapers_dir", DEFAULTS["wallpapers_dir"])
@@ -111,3 +106,4 @@ METRICS_VISIBLE = config.get("metrics_visible", DEFAULTS["metrics_visible"])
 METRICS_SMALL_VISIBLE = config.get("metrics_small_visible", DEFAULTS["metrics_small_visible"])
 SELECTED_MONITORS = config.get("selected_monitors", DEFAULTS["selected_monitors"])
 SETTINGS_WINDOW_RESIZABLE = False
+LOG_LEVEL = config.get("log_level", DEFAULTS["log_level"])

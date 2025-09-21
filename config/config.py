@@ -20,6 +20,10 @@ _configure_sys_path_for_direct_execution()
 import shutil
 from fabric import Application
 
+from config.loguru_config import logger
+
+logger = logger.bind(name="Config", type="Config")
+
 if __name__ == "__main__" and not __package__:
     from config.data import APP_NAME, APP_NAME_CAP
     from config.settings_gui import HyprConfGUI
@@ -44,9 +48,9 @@ def open_config():
             os.makedirs(os.path.dirname(dest_lock), exist_ok=True)
             shutil.copy(src_lock, dest_lock)
             show_lock_checkbox = False 
-            print(f"Copied default hyprlock config to {dest_lock}")
+            logger.info(f"Copied default hyprlock config to {dest_lock}")
         except Exception as e:
-            print(f"Error copying default hyprlock config: {e}")
+            logger.error(f"Unable to copy default hyprlock config: {e}")
             show_lock_checkbox = os.path.exists(src_lock)
 
     show_idle_checkbox = True
@@ -57,9 +61,9 @@ def open_config():
             os.makedirs(os.path.dirname(dest_idle), exist_ok=True)
             shutil.copy(src_idle, dest_idle)
             show_idle_checkbox = False
-            print(f"Copied default hypridle config to {dest_idle}")
+            logger.info(f"Copied default hypridle config to {dest_idle}")
         except Exception as e:
-            print(f"Error copying default hypridle config: {e}")
+            logger.error(f"Unable to copy default hypridle config: {e}")
             show_idle_checkbox = os.path.exists(src_idle)
 
     app = Application(f"{APP_NAME}-settings")
