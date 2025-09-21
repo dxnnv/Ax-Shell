@@ -4,9 +4,11 @@ After=graphical-session.target
 
 [Service]
 Type=exec
-ExecStart=$HOME/.local/bin/ax-shell
+WorkingDirectory=%h/.config/Ax-Shell
+ExecStart=%h/.local/bin/ax-shell
 Restart=on-failure
 Slice=app-graphical.slice
+Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=graphical-session.target
