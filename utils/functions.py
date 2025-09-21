@@ -8,22 +8,21 @@ import gi
 import psutil
 from fabric.utils import exec_shell_command, exec_shell_command_async, get_relative_path
 from gi.repository import Gdk, GLib, Gtk
-from loguru import logger
 
 from .colors import Colors
 from .icons import distro_text_icons
 
 gi.require_version("Gtk", "3.0")
 
+from config.loguru_config import logger
+
+logger = logger.bind(name="Functions", type="Utils")
 
 class ExecutableNotFoundError(ImportError):
     """Raised when an executable is not found."""
 
     def __init__(self, executable_name: str):
-        super().__init__(
-            f"{Colors.ERROR}Executable {Colors.UNDERLINE}{executable_name}{Colors.RESET} not found. Please install it using your package manager."  # noqa: E501
-        )
-
+        super().__init__(f"{Colors.ERROR}Executable '{executable_name}' not found. Please install it using your package manager.")  # noqa: E501
 
 # Function to escape the markup
 def parse_markup(text):
@@ -42,9 +41,7 @@ def copy_theme(theme: str):
     source_file = get_relative_path(f"../styles/themes/{theme}.scss")
 
     if not os.path.exists(source_file):
-        logger.warning(
-            f"{Colors.WARNING}Warning: The theme file '{theme}.scss' was not found. Using default theme."  # noqa: E501
-        )
+        logger.warning(f"The theme file '{theme}.scss' was not found. Using default theme.")  # noqa: E501
         source_file = get_relative_path("../styles/themes/catpuccin-mocha.scss")
 
     try:
@@ -54,12 +51,10 @@ def copy_theme(theme: str):
         # Open the destination file in write mode
         with open(destination_file, "w") as destination_file:
             destination_file.write(content)
-            logger.info(f"{Colors.INFO}[THEME] '{theme}' applied successfully.")
+            logger.info(f"'{theme}' applied successfully.")
 
     except FileNotFoundError:
-        logger.error(
-            f"{Colors.ERROR}Error: The theme file '{source_file}' was not found."
-        )
+        logger.error(f"The theme file '{source_file}' was not found.")
         exit(1)
 
 
@@ -186,7 +181,7 @@ def send_notification(
     try:
         subprocess.run(command, check=True)
     except subprocess.CalledProcessError as e:
-        print(f"Failed to send notification: {e}")
+        logger.error(f"Failed to send notification: {e}")
 
 
 # Function to get the relative time

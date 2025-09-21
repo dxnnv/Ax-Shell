@@ -23,6 +23,10 @@ from modules.dock import Dock
 from modules.updater import run_updater
 from utils.conversion import Conversion
 
+from config.loguru_config import logger
+
+logger = logger.bind(name="Launcher", type="Module")
+
 tooltip_settings = f"<b>Open {data.APP_NAME_CAP} Settings</b>"
 tooltip_close = "<b>Close</b>"
 
@@ -488,7 +492,7 @@ class AppLauncher(Box):
 
     def evaluate_calculator_expression(self, text: str):
 
-        print(f"Evaluating calculator expression: {text}")
+        logger.debug(f"Evaluating calculator expression: {text}")
         
 
         expr = text.lstrip("=").strip()
@@ -561,7 +565,7 @@ class AppLauncher(Box):
         self.update_calculator_viewport()
 
     def evaluate_conversion_expression(self, text: str):
-        print(f"Evaluating conversion expression: {text}")
+        logger.debug(f"Evaluating conversion expression: {text}")
         expr = text.lstrip(";").strip()
         if not expr:
             return
@@ -715,7 +719,7 @@ class AppLauncher(Box):
         try:
             subprocess.run(["wl-copy"], input=copy_text.encode(), check=True)
         except subprocess.CalledProcessError as e:
-            print(f"Clipboard copy failed: {e}")
+            logger.warning(f"Clipboard copy failed: {e}")
 
     def delete_selected_calc_history(self):
         if self.selected_index != -1 and self.selected_index < len(self.calc_history):

@@ -15,10 +15,11 @@ from fabric.widgets.scrolledwindow import ScrolledWindow
 from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango
 from PIL import Image
 
-import config.config
 import config.data as data
 import modules.icons as icons
+from config.loguru_config import logger
 
+logger = logger.bind(name="Wallpapers", type="Module")
 
 class WallpaperSelector(Box):
     CACHE_DIR = f"{data.CACHE_DIR}/thumbs"  # Changed from wallpapers to thumbs
@@ -107,7 +108,7 @@ class WallpaperSelector(Box):
             # File doesn't exist, keep default True and create it on first toggle
             pass
         except Exception as e:
-            print(f"Error reading matugen state file: {e}")
+            logger.error(f"Unable to read matugen state file: {e}")
             # Keep default True on error
 
         # Create a switcher to enable/disable Matugen (enabled by default)
@@ -199,11 +200,9 @@ class WallpaperSelector(Box):
                         new_full_path = os.path.join(data.WALLPAPERS_DIR, new_name)
                         try:
                             os.rename(full_path, new_full_path)
-                            print(
-                                f"Renamed old wallpaper '{full_path}' to '{new_full_path}'"
-                            )
+                            logger.debug(f"Renamed old wallpaper '{full_path}' to '{new_full_path}'")
                         except Exception as e:
-                            print(f"Error renaming file {full_path}: {e}")
+                            logger.error(f"Unable to rename file {full_path}: {e}")
                         yield
 
         # Process files in small batches to keep UI responsive
@@ -248,7 +247,7 @@ class WallpaperSelector(Box):
 
     def set_random_wallpaper(self, widget, external=False):
         if not self.files:
-            print("No wallpapers available to set a random one.")
+            logger.warning("No wallpapers available to set a random one.")
             return
 
         file_name = random.choice(self.files)
@@ -267,7 +266,7 @@ class WallpaperSelector(Box):
                 f'swww img "{full_path}" -t outer --transition-duration 1.5 --transition-step 255 --transition-fps 60 -f Nearest'
             )
         
-        print(f"Set random wallpaper: {file_name}")
+        logger.info(f"Set random wallpaper: {file_name}")
 
         if external:
             exec_shell_command_async(f"notify-send '🎲 Wallpaper' 'Setting a random wallpaper 🎨' -a '{data.APP_NAME_CAP}' -i '{full_path}' -e")
@@ -289,7 +288,7 @@ class WallpaperSelector(Box):
                     try:
                         os.remove(cache_path)
                     except Exception as e:
-                        print(f"Error deleting cache {cache_path}: {e}")
+                        logger.error(f"Unable to delete cache {cache_path}: {e}")
                 self.thumbnails = [(p, n) for p, n in self.thumbnails if n != file_name]
                 GLib.idle_add(self.arrange_viewport, self.search_entry.get_text())
         elif event_type == Gio.FileMonitorEvent.CREATED:
@@ -302,9 +301,9 @@ class WallpaperSelector(Box):
                     try:
                         os.rename(full_path, new_full_path)
                         file_name = new_name
-                        print(f"Renamed file '{full_path}' to '{new_full_path}')")
+                        logger.debug(f"Renamed file '{full_path}' to '{new_full_path}')")
                     except Exception as e:
-                        print(f"Error renaming file {full_path}: {e}")
+                        logger.error(f"Unable to remove file {full_path}: {e}")
                 if file_name not in self.files:
                     self.files.append(file_name)
                     self.files.sort()
@@ -316,7 +315,7 @@ class WallpaperSelector(Box):
                     try:
                         os.remove(cache_path)
                     except Exception as e:
-                        print(f"Error deleting cache for changed file {file_name}: {e}")
+                        logger.error(f"Unable to delete cache for changed file {file_name}: {e}")
                 self.executor.submit(self._process_file, file_name)
 
     def arrange_viewport(self, query: str = ""):
@@ -357,7 +356,7 @@ class WallpaperSelector(Box):
 
     def on_scheme_changed(self, combo):
         selected_scheme = combo.get_active_id()
-        print(f"Color scheme selected: {selected_scheme}")
+        logger.info(f"Color scheme selected: {selected_scheme}")
 
     def on_search_entry_key_press(self, widget, event):
         if event.state & Gdk.ModifierType.SHIFT_MASK:
@@ -496,7 +495,7 @@ class WallpaperSelector(Box):
                     img_cropped.thumbnail((96, 96), Image.Resampling.LANCZOS)
                     img_cropped.save(cache_path, "PNG")
             except Exception as e:
-                print(f"Error processing {file_name}: {e}")
+                logger.error(f"Unable to process {file_name}: {e}")
                 return
         self.thumbnail_queue.append((cache_path, file_name))
         GLib.idle_add(self._process_batch)
@@ -510,7 +509,7 @@ class WallpaperSelector(Box):
                 self.thumbnails.append((pixbuf, file_name))
                 self.viewport.get_model().append([pixbuf, file_name])
             except Exception as e:
-                print(f"Error loading thumbnail {cache_path}: {e}")
+                logger.error(f"Unable to load thumbnail {cache_path}: {e}")
         if self.thumbnail_queue:
             GLib.idle_add(self._process_batch)
         return False
@@ -560,16 +559,16 @@ class WallpaperSelector(Box):
             with open(data.MATUGEN_STATE_FILE, 'w') as f:
                 f.write(str(is_active))
         except Exception as e:
-            print(f"Error writing matugen state file: {e}")
+            logger.error(f"Unable to write matugen state file: {e}")
 
     def on_apply_color_clicked(self, button):
         """Applies the color selected by the hue slider via matugen."""
         hue_value = self.hue_slider.get_value() # Get value from 0-360
         hex_color = self.hsl_to_rgb_hex(hue_value) # Convert HSL(hue, 1.0, 0.5) to HEX
-        print(f"Applying color from slider: H={hue_value}, HEX={hex_color}")
+        logger.info(f"Applying color from slider: H={hue_value}, HEX={hex_color}")
         selected_scheme = self.scheme_dropdown.get_active_id()
         # Run matugen with the chosen hex color and selected scheme
         exec_shell_command_async(f'matugen color hex "{hex_color}" -t {selected_scheme}')
-        # Optionally save the chosen color to config if needed later
+        # Optionally, save the chosen color to config if needed later
         # config.config.bind_vars["matugen_hex_color"] = hex_color
         # config.config.save_config() # Removed as save_config doesn't exist

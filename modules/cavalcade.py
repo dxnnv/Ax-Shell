@@ -10,8 +10,9 @@ from math import pi
 from fabric.utils.helpers import get_relative_path
 from fabric.widgets.overlay import Overlay
 from gi.repository import Gdk, GLib, Gtk
-from loguru import logger
+from config.loguru_config import logger
 
+logger = logger.bind(name="Cava", type="Module")
 
 def get_bars(file_path):
     config = configparser.ConfigParser()
@@ -75,7 +76,7 @@ class Cava:
             )
             self.state = self.RUNNING
         except Exception:
-            logger.exception("Fail to launch cava")
+            logger.exception("Failed to launch cava")
 
     def _start_io_reader(self):
         # Open FIFO in non-blocking mode for reading

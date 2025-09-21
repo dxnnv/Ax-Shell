@@ -5,6 +5,9 @@ from fabric.widgets.label import Label
 
 import config.data as data
 import modules.icons as icons
+from config.loguru_config import logger
+
+logger = logger.bind(name="Power", type="Module")
 
 tooltip_lock = "Lock"
 tooltip_suspend = "Suspend"
@@ -106,26 +109,26 @@ class PowerMenu(Box):
         self.notch.close_notch()
 
     def lock(self, *args):
-        print("Locking screen...")
+        logger.info("Locking screen...")
         exec_shell_command_async("loginctl lock-session")
         self.close_menu()
 
     def suspend(self, *args):
-        print("Suspending system...")
+        logger.info("Suspending system...")
         exec_shell_command_async("systemctl suspend")
         self.close_menu()
 
     def logout(self, *args):
-        print("Logging out...")
+        logger.info("Logging out...")
         exec_shell_command_async("hyprctl dispatch exit")
         self.close_menu()
 
     def reboot(self, *args):
-        print("Rebooting system...")
+        logger.info("Rebooting system...")
         exec_shell_command_async("systemctl reboot")
         self.close_menu()
 
     def poweroff(self, *args):
-        print("Powering off...")
+        logger.info("Powering off...")
         exec_shell_command_async("systemctl poweroff")
         self.close_menu()

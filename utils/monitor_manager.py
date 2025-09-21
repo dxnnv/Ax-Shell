@@ -7,6 +7,9 @@ import gi
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk
 
+from config.loguru_config import logger
+
+logger = logger.bind(name="Monitor Manager", type="Utils")
 
 class Signal:
     """Simple signal implementation for monitor manager."""
@@ -24,7 +27,7 @@ class Signal:
             try:
                 callback(*args, **kwargs)
             except Exception as e:
-                print(f"Error in signal callback: {e}")
+                logger.error(f"Error in signal callback: {e}")
 
 
 class MonitorManager:
@@ -64,7 +67,7 @@ class MonitorManager:
         self._monitor_focus_service = service
         if service:
             service.monitor_focused.connect(self._on_monitor_focused)
-    
+
     def _get_gtk_monitor_info(self) -> List[Dict]:
         """Get monitor information using GTK/GDK including scale factors."""
         gtk_monitors = []
@@ -78,7 +81,7 @@ class MonitorManager:
                         geometry = monitor.get_geometry()
                         scale_factor = monitor.get_scale_factor()
                         model = monitor.get_model() or f'monitor-{i}'
-                        
+
                         gtk_monitors.append({
                             'id': i,
                             'name': model,
@@ -89,8 +92,8 @@ class MonitorManager:
                             'scale': scale_factor
                         })
         except Exception as e:
-            print(f"Error getting GTK monitor info: {e}")
-        
+            logger.error(f"Unable to get GTK monitor info: {e}")
+
         return gtk_monitors
 
     def refresh_monitors(self) -> List[Dict]:
@@ -180,7 +183,7 @@ class MonitorManager:
                         'height': geometry.height,
                         'x': geometry.x,
                         'y': geometry.y,
-                        'focused': i == 0,  # Assume first monitor is focused
+                        'focused': i == 0,  # Assume the first monitor is focused
                         'scale': scale_factor
                     })
                     
@@ -191,11 +194,11 @@ class MonitorManager:
             pass
     
     def get_monitors(self) -> List[Dict]:
-        """Get list of all monitors."""
+        """Get a list of all monitors."""
         return self._monitors.copy()
     
     def get_monitor_by_id(self, monitor_id: int) -> Optional[Dict]:
-        """Get monitor by ID."""
+        """Get a monitor by ID."""
         for monitor in self._monitors:
             if monitor['id'] == monitor_id:
                 return monitor.copy()
@@ -206,69 +209,51 @@ class MonitorManager:
         return self._focused_monitor_id
     
     def get_focused_monitor(self) -> Optional[Dict]:
-        """Get currently focused monitor."""
+        """Get the currently focused monitor."""
         return self.get_monitor_by_id(self._focused_monitor_id)
-    
+
     def get_workspace_range_for_monitor(self, monitor_id: int) -> Tuple[int, int]:
         """
         Get workspace range for a monitor (10 workspaces per monitor).
-        
-        Args:
-            monitor_id: Monitor ID
-            
         Returns:
             Tuple of (start_workspace, end_workspace)
         """
         start = (monitor_id * 10) + 1
         end = start + 9
-        return (start, end)
-    
+        return start, end
+
     def get_monitor_for_workspace(self, workspace_id: int) -> int:
-        """
-        Get monitor ID for a workspace.
-        
-        Args:
-            workspace_id: Workspace number
-            
-        Returns:
-            Monitor ID
-        """
+        """Get monitor ID for a workspace."""
         if workspace_id <= 0:
             return 0
         return (workspace_id - 1) // 10
-    
+
     def get_monitor_scale(self, monitor_id: int) -> float:
         """
-        Get scale factor for a monitor.
-        
-        Args:
-            monitor_id: Monitor ID
-            
-        Returns:
-            Scale factor (default 1.0 if not found)
+        Get scale factor for a monitor (default 1.0 if not found)
         """
         monitor = self.get_monitor_by_id(monitor_id)
         return monitor.get('scale', 1.0) if monitor else 1.0
     
     def is_notch_open(self, monitor_id: int) -> bool:
-        """Check if notch is open on a monitor."""
+        """Check if the notch is open on a monitor."""
         return self._notch_states.get(monitor_id, False)
     
     def set_notch_state(self, monitor_id: int, is_open: bool, module: Optional[str] = None):
-        """Set notch state for a monitor."""
+        """Set thenotch state for a monitor."""
         self._notch_states[monitor_id] = is_open
         self._current_notch_module[monitor_id] = module if is_open else None
     
     def get_current_notch_module(self, monitor_id: int) -> Optional[str]:
-        """Get current notch module for a monitor."""
+        """Get the current notch module for a monitor."""
         return self._current_notch_module.get(monitor_id)
     
     def close_all_notches_except(self, except_monitor_id: int):
-        """Close all notches except on specified monitor."""
+        """Close all notches except on the specified monitor."""
         for monitor_id in self._notch_states:
             if monitor_id != except_monitor_id and self._notch_states[monitor_id]:
                 self.set_notch_state(monitor_id, False)
-                # Get notch instance and close it
+                # Get the notch instance and close it
                 instances = self._monitor_instances.get(monitor_id, {})
                 notch = instances.get('notch')
                 if notch and hasattr(notch, 'close'):
@@ -289,7 +274,7 @@ class MonitorManager:
         return self._monitor_instances.get(monitor_id, {})
     
     def get_instance(self, monitor_id: int, component: str):
-        """Get specific component instance for a monitor."""
+        """Get the specific component instance for a monitor."""
         instances = self._monitor_instances.get(monitor_id, {})
         return instances.get(component)
     
@@ -308,7 +293,7 @@ class MonitorManager:
     
     def _handle_notch_focus_switch(self, old_monitor: int, new_monitor: int):
         """Handle notch switching between monitors."""
-        # Close notch on old monitor if open
+        # Close notch on the old monitor if open
         if self.is_notch_open(old_monitor):
             old_module = self.get_current_notch_module(old_monitor)
             self.close_all_notches_except(-1)  # Close all

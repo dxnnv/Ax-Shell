@@ -4,8 +4,7 @@ import subprocess
 import sys
 import tempfile
 
-from fabric.utils import idle_add, remove_handler
-from fabric.utils.helpers import get_relative_path
+from fabric.utils import remove_handler
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
@@ -16,6 +15,9 @@ from gi.repository import Gdk, GdkPixbuf, GLib
 
 import modules.icons as icons
 
+from config.loguru_config import logger
+
+logger = logger.bind(name="Cliphist", type="Module")
 
 class ClipHistory(Box):
     def __init__(self, **kwargs):
@@ -43,7 +45,7 @@ class ClipHistory(Box):
             h_expand=True,
             h_align="fill",
             notify_text=self.filter_items,
-            on_activate=lambda entry, *_: self.use_selected_item(),
+            on_activate=lambda *_: self.use_selected_item(),
             on_key_press_event=self.on_search_entry_key_press,
         )
         self.search_entry.props.xalign = 0.5
@@ -130,9 +132,9 @@ class ClipHistory(Box):
             # Update UI from main thread
             GLib.idle_add(self._update_items, new_items)
         except subprocess.CalledProcessError as e:
-            print(f"Error loading clipboard history: {e}", file=sys.stderr)
+            logger.error(f"Unable to load clipboard history: {e}", file=sys.stderr)
         except Exception as e:
-            print(f"Unexpected error: {e}", file=sys.stderr)
+            logger.error(f"Unexpected error: {e}", file=sys.stderr)
         finally:
             GLib.idle_add(self._loading_finished)
     
@@ -286,7 +288,7 @@ class ClipHistory(Box):
             
             GLib.idle_add(self._update_image_button, button, pixbuf)
         except Exception as e:
-            print(f"Error loading image preview: {e}", file=sys.stderr)
+            logger.error(f"Unable to load image preview: {e}", file=sys.stderr)
 
     def _update_image_button(self, button, pixbuf):
         """Update the button with the loaded image preview"""
@@ -355,7 +357,7 @@ class ClipHistory(Box):
             )
             GLib.idle_add(self.close)
         except subprocess.CalledProcessError as e:
-            print(f"Error pasting clipboard item: {e}", file=sys.stderr)
+            logger.error(f"Unable to paste clipboard item: {e}", file=sys.stderr)
 
     def delete_item(self, item_id):
         """Delete the selected clipboard item (async)"""
@@ -372,13 +374,13 @@ class ClipHistory(Box):
             if not self._loading:
                 GLib.Thread.new("cliphist-loader", self._load_clipboard_items_thread, None)
         except subprocess.CalledProcessError as e:
-            print(f"Error deleting clipboard item: {e}", file=sys.stderr)
+            logger.error(f"Unable to delete clipboard item: {e}", file=sys.stderr)
 
     def clear_history(self):
         """Clear all clipboard history (async)"""
         GLib.Thread.new("clear-history", self._clear_history_thread, None)
 
-    def _clear_history_thread(self, user_data):
+    def _clear_history_thread(self):
         """Background thread worker for clearing clipboard history"""
         try:
             subprocess.run(["cliphist", "wipe"], check=True)
@@ -386,7 +388,7 @@ class ClipHistory(Box):
             if not self._loading:
                 GLib.Thread.new("cliphist-loader", self._load_clipboard_items_thread, None)
         except subprocess.CalledProcessError as e:
-            print(f"Error clearing clipboard history: {e}", file=sys.stderr)
+            logger.error(f"Unable to clear clipboard history: {e}", file=sys.stderr)
 
     def filter_items(self, entry, *_):
         """Filter clipboard items based on search text"""
@@ -508,4 +510,4 @@ class ClipHistory(Box):
                 shutil.rmtree(self.tmp_dir)
             self.image_cache.clear()
         except Exception as e:
-            print(f"Error cleaning up temporary files: {e}", file=sys.stderr)
+            logger.error(f"Unable to clean up temporary files: {e}", file=sys.stderr)

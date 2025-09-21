@@ -1,8 +1,10 @@
-import json
 import subprocess
 import threading
 from typing import Optional
 
+from config.loguru_config import logger
+
+logger = logger.bind(name="Monitor Focus", type="Service")
 
 class Signal:
     """Simple signal implementation for monitor focus service."""
@@ -20,7 +22,7 @@ class Signal:
             try:
                 callback(*args, **kwargs)
             except Exception as e:
-                print(f"Error in signal callback: {e}")
+                logger.error(f"Error in signal callback: {e}")
 
 
 class MonitorFocusService:
@@ -118,9 +120,9 @@ class MonitorFocusService:
                         self._handle_hyprland_event(line.strip())
                     
         except (subprocess.SubprocessError, FileNotFoundError) as e:
-            print(f"MonitorFocusService: Error listening to Hyprland: {e}")
+            logger.error(f"Error listening to Hyprland: {e}")
         except Exception as e:
-            print(f"MonitorFocusService: Unexpected error: {e}")
+            logger.error(f"Unexpected error: {e}")
     
     def _handle_hyprland_event(self, event_line: str):
         """Parse and handle Hyprland event."""
@@ -141,7 +143,7 @@ class MonitorFocusService:
                 self._handle_workspace_change(event_data)
                 
         except Exception as e:
-            print(f"MonitorFocusService: Error handling event '{event_line}': {e}")
+            logger.error(f"Error handling event '{event_line}': {e}")
     
     def _handle_focused_monitor(self, data: str):
         """Handle focusedmon event: monitor_name,workspace_name"""
@@ -170,7 +172,7 @@ class MonitorFocusService:
                 self.monitor_focused.emit(monitor_name, monitor_id, workspace_id)
                 
         except Exception as e:
-            print(f"MonitorFocusService: Error in _handle_focused_monitor: {e}")
+            logger.error(f"Error in _handle_focused_monitor: {e}")
     
     def _handle_workspace_change(self, data: str):
         """Handle workspace event: workspace_name"""
@@ -189,7 +191,7 @@ class MonitorFocusService:
             self.workspace_changed.emit(workspace_id, self._current_monitor_name)
             
         except Exception as e:
-            print(f"MonitorFocusService: Error in _handle_workspace_change: {e}")
+            logger.error(f"Error in _handle_workspace_change: {e}")
     
     def get_current_monitor_id(self) -> int:
         """Get current monitor ID."""

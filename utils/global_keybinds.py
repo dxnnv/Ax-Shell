@@ -1,5 +1,8 @@
 from typing import Optional
 
+from config.loguru_config import logger
+
+logger = logger.bind(name="Keybinds", type="Utils")
 
 class GlobalKeybindHandler:
     """
@@ -53,7 +56,7 @@ class GlobalKeybindHandler:
                 self._monitor_manager.set_notch_state(focused_monitor_id, True, module_name)
                 return True
             except Exception as e:
-                print(f"GlobalKeybindHandler: Error opening module '{module_name}': {e}")
+                logger.error(f"Unable to open module '{module_name}': {e}")
         
         return False
     
@@ -83,7 +86,7 @@ class GlobalKeybindHandler:
                     self._monitor_manager.set_notch_state(focused_monitor_id, True)
                 return True
             except Exception as e:
-                print(f"GlobalKeybindHandler: Error toggling notch: {e}")
+                logger.error(f"Unable to toggle notch: {e}")
         
         return False
     
@@ -200,5 +203,5 @@ def init_global_keybind_objects():
         
         return handler
     except ImportError as e:
-        print(f"Error initializing global keybind objects: {e}")
+        logger.error(f"Unable to initialize global keybind objects: {e}")
         return None

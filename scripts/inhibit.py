@@ -14,6 +14,9 @@ from pywayland.protocol.wayland.wl_compositor import WlCompositor
 from pywayland.protocol.wayland.wl_registry import WlRegistryProxy
 from pywayland.protocol.wayland.wl_surface import WlSurface
 
+from config.loguru_config import logger
+
+logger = logger.bind(name="Wayland Inhibitor", type="Script")
 
 @dataclass
 class GlobalRegistry:
@@ -58,7 +61,7 @@ def main() -> None:
     display.roundtrip()
 
     if global_registry.surface is None or global_registry.inhibit_manager is None:
-        print("Wayland seems not to support idle_inhibit_unstable_v1 protocol.")
+        logger.warning("Wayland seems not to support idle_inhibit_unstable_v1 protocol.")
         shutdown()
         sys.exit(1)
 
@@ -69,9 +72,9 @@ def main() -> None:
     display.dispatch()
     display.roundtrip()
 
-    print("Inhibiting idle...")
+    logger.debug("Inhibiting idle...")
     done.wait()
-    print("Shutting down...")
+    logger.debug("Shutting down...")
 
     inhibitor.destroy()
 

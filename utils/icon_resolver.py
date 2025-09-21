@@ -6,7 +6,9 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
-from loguru import logger
+from config.loguru_config import logger
+
+logger = logger.bind(name="Icon Resolver", type="Utils")
 
 import config.data as data
 
@@ -22,7 +24,7 @@ class IconResolver:
                 try:
                     self._icon_dict = json.load(f)
                 except json.JSONDecodeError:
-                    logger.info("[ICONS] Cache file does not exist or is corrupted")
+                    logger.warning("Cache file does not exist or is corrupted")
                     self._icon_dict = {}
         else:
             self._icon_dict = {}
@@ -33,9 +35,7 @@ class IconResolver:
         if app_id in self._icon_dict:
             return self._icon_dict[app_id]
         new_icon = self._compositor_find_icon(app_id)
-        logger.info(
-            f"[ICONS] found new icon: '{new_icon}' for app id: '{app_id}', storing..."
-        )
+        logger.debug(f"Found new icon: '{new_icon}' for app id: '{app_id}', storing...")
         self._store_new_icon(app_id, new_icon)
         return new_icon
 
@@ -46,9 +46,7 @@ class IconResolver:
             # Try to load the resolved icon.
             return icon_theme.load_icon(icon_name, size, Gtk.IconLookupFlags.FORCE_SIZE)
         except GLib.Error as primary_error:
-            logger.warning(
-                f"Warning: Icon '{icon_name}' not found in theme. Error: {primary_error}"
-            )
+            logger.warning(f"Icon '{icon_name}' not found in theme: {primary_error}")
             try:
                 # Fallback to the default application icon.
                 return icon_theme.load_icon(
@@ -56,7 +54,7 @@ class IconResolver:
                 )
             except GLib.Error as fallback_error:
                 logger.error(
-                    f"Error: Fallback icon '{self.default_applicaiton_icon}' also not found. Error: {fallback_error}"
+                    f"Fallback icon '{self.default_applicaiton_icon}' also not found: {fallback_error}"
                 )
                 return None
 

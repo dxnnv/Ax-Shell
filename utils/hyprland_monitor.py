@@ -1,21 +1,18 @@
 import json
-from typing import Dict
-
 import gi
-
 import warnings
 
 from fabric.hyprland import Hyprland
+from typing import Dict
 
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk
-
 
 # IDC,  Gdk.Screen.get_monitor_plug_name is deprecated
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # Another idea is to use Gdk.Monitor.get_model() however,
-#       there is no garuntee that this will be unique
+#       there is no guarantee that this will be unique
 #       Example: both monitors have the same model number
 #       (quite common in multi monitor setups)
 

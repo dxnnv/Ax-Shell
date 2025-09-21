@@ -2,6 +2,9 @@ import subprocess
 import json
 
 import config.data as data
+from config.loguru_config import logger
+
+logger = logger.bind(name="Occlusion", type="Utils")
 
 def get_current_workspace():
     """
@@ -20,7 +23,7 @@ def get_current_workspace():
             if part == "ID" and i + 1 < len(parts):
                 return int(parts[i+1])
     except Exception as e:
-        print(f"Error getting current workspace: {e}")
+        logger.error(f"Unable to get current workspace: {e}")
     return -1
 
 def get_screen_dimensions():
@@ -51,7 +54,7 @@ def get_screen_dimensions():
         if monitors:
             return monitors[0].get("width", data.CURRENT_WIDTH), monitors[0].get("height", data.CURRENT_HEIGHT)
     except Exception as e:
-        print(f"Error getting screen dimensions: {e}")
+        logger.error(f"Unable to get screen dimensions: {e}")
     
     # Default fallback values
     return data.CURRENT_WIDTH, data.CURRENT_HEIGHT
@@ -91,7 +94,7 @@ def check_occlusion(occlusion_region, workspace=None):
     
     # Ensure occlusion_region is in the correct format (x, y, width, height)
     if not isinstance(occlusion_region, tuple) or len(occlusion_region) != 4:
-        print(f"Invalid occlusion region format: {occlusion_region}")
+        logger.error(f"Invalid occlusion region format: {occlusion_region}")
         return False
 
     try:
@@ -102,7 +105,7 @@ def check_occlusion(occlusion_region, workspace=None):
         )
         clients = json.loads(result.stdout)
     except Exception as e:
-        print(f"Error retrieving client windows: {e}")
+        logger.error(f"Unable to retrieve client windows: {e}")
         return False
 
     occ_x, occ_y, occ_width, occ_height = occlusion_region

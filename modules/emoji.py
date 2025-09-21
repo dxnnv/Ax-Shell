@@ -14,6 +14,10 @@ from gi.repository import Gdk
 import config.data as data
 import modules.icons as icons
 
+from config.loguru_config import logger
+
+logger = logger.bind(name="Emoji", type="Module")
+
 vertical_mode = data.PANEL_THEME == "Panel" and (data.BAR_POSITION in ["Left", "Right"] or data.PANEL_POSITION in ["Start", "End"])
 
 emoji_rows = 3 if not vertical_mode else 9
@@ -89,7 +93,7 @@ class EmojiPicker(Box):
         emoji_data = {}
         emoji_file_path = get_relative_path("../assets/emoji.json")
         if not os.path.exists(emoji_file_path):
-            print(f"Emoji JSON file not found at: {emoji_file_path}")
+            logger.error(f"Emoji JSON file not found at: {emoji_file_path}")
             return {}
 
         with open(emoji_file_path, 'r') as f:
@@ -318,4 +322,4 @@ class EmojiPicker(Box):
         try:
             subprocess.run(["wl-copy"], input=emoji_char.encode('utf-8'), check=True)
         except subprocess.CalledProcessError as e:
-            print(f"Clipboard copy failed: {e}")
+            logger.error(f"Clipboard copy failed: {e}")
