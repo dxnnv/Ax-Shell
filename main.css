@@ -20,6 +20,7 @@
 @import url("./styles/shadows.css");
 @import url("./styles/tools.css");
 @import url("./styles/wallpapers.css");
+@import url("./styles/weather_forecast.css");
 @import url("./styles/workspaces.css");
 
 * {
