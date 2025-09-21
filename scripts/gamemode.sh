@@ -3,7 +3,7 @@
 # Check if animations are disabled (game mode is active)
 check_gamemode() {
     HYPRGAMEMODE=$(hyprctl getoption animations:enabled | awk 'NR==1{print $2}')
-    [[ "$HYPRGAMEMODE" = 0 ]] && echo false || echo true
+    [ "$HYPRGAMEMODE" = 0 ] && echo false || echo true
 }
 
 # Toggle game mode state
@@ -25,10 +25,6 @@ toggle_gamemode() {
 
 # Main script logic
 case "$1" in
-    check)
-        check_gamemode
-        ;;
-    *)
-        toggle_gamemode
-        ;;
+    check) check_gamemode ;;
+    *) toggle_gamemode ;;
 esac

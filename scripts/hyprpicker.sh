@@ -6,7 +6,7 @@ case "$1" in
   *) echo "Usage: $0 [-rgb|-hex|-hsv]"; exit 1 ;;
 esac
 
-mode="${1#-}"
+MODE="${1#-}"
 ICON="$(mktemp -t hyprcolor.XXXXXX.png)"
 trap 'rm -f "$ICON"' EXIT
 
