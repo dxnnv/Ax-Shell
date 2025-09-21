@@ -37,11 +37,11 @@ GROUP_MAP = {
 
 # ---------------- Helpers ----------------
 _TAGS_RE = re.compile(r"^(?:\[(?!\.)(?P<tag>[^]]+)])+\s*")
-# Captures one or more [Tag] prefixes at the start of message
+# Captures one or more [Tag] prefixes at the start of a message
 
 def _extract_tags_and_clean_message(record: Dict[str, Any]) -> None:
     """
-    Pull leading [Tag][Sub]... from the start of message into extra['tag'].
+    Pull leading [Tag][Sub]... from the start of a message into extra['tag'].
     Mutates record['message'] to drop those prefixes.
     """
     msg = record["message"]
@@ -80,13 +80,13 @@ def _patch(record: "Record") -> None:
     # Hoist [Tag]s like [Audio][Microphone] into extra['tag']
     _extract_tags_and_clean_message(record)
 
-    # Derive defaults from module path
+    # Derive defaults from the module path
     parts = record["name"].split(".")
     root = parts[0] if parts else record["name"]
     group = GROUP_MAP.get(root, root.capitalize())
     component = (parts[1] if len(parts) > 1 else parts[-1]).replace("_", " ").title()
 
-    # If this is the top-level script and you bound a tag (e.g., "Main"), use it as the group label
+    # If this is the top-level script, and you bound a tag (e.g., "Main"), use it as the group label
     if root == "__main__" and extra["tag"] != "-":
         group = extra["tag"]
 
@@ -112,6 +112,7 @@ def _rate_limited_sink(msg):
 _FABRIC_DOWNGRADE_RULES = [
     (re.compile(r"^fabric\.audio\."), re.compile(r"^Adding stream \d+ with name ")),
     (re.compile(r"^fabric\.hyprland\.widgets"), re.compile(r"^Activated window ")),
+    (re.compile(r"^fabric\.hyprland\.widgets"), re.compile(r"^Closed window ")),
 ]
 
 def _is_noisy_fabric(record) -> bool:
