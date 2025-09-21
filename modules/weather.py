@@ -69,7 +69,7 @@ class Weather(Box):
 
     # --- data fetching ---
 
-    def _ensure_coordinates(self) -> bool:
+    def get_coordinates(self) -> bool:
         self.lat, self.lon, _ = WeatherUtils.get_coordinates(self.session)
         return self.lat is not None and self.lon is not None
 
@@ -96,7 +96,7 @@ class Weather(Box):
                 GLib.idle_add(self.label.set_label, f"{emoji} {int(round(temp))}°C")
                 self.has_weather_data = True
             else:
-                logger.warning(f"met.no error {r.status_code}: {r.text[:120]}")
+                logger.warning(f"met.no error {response.status_code}: {response.text[:120]}")
                 self.has_weather_data = False
                 GLib.idle_add(self.label.set_markup, f"{icons.cloud_off} Unavailable")
         except Exception as e:

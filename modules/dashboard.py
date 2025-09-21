@@ -15,7 +15,7 @@ from modules.mixer import Mixer
 from modules.pins import Pins
 from modules.wallpapers import WallpaperSelector
 from modules.weather_forecast import WeatherForecast
-from modules.widgets import Widgets
+from modules.widget_box import Widgets
 
 
 class Dashboard(Box):

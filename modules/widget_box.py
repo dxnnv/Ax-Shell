@@ -2,12 +2,11 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 from fabric.widgets.box import Box
-from fabric.widgets.label import Label
 from fabric.widgets.stack import Stack
 
 import config.data as data
 from modules.buttons import Buttons
-from modules.calendar import Calendar
+from modules.cal import Calendar
 from modules.controls import ControlSliders
 from modules.metrics import Metrics
 from modules.notifications import NotificationHistory

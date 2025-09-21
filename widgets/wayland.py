@@ -1,7 +1,6 @@
-from gi.repository import Gdk, GObject, Gtk
 import re
 from collections.abc import Iterable
-from enum import Enum
+from enum import IntEnum
 from typing import Literal, cast
 
 import cairo
@@ -9,6 +8,7 @@ import gi
 from fabric.core.service import Property
 from fabric.utils.helpers import extract_css_values, get_enum_member
 from fabric.widgets.window import Window
+from gi.repository import Gdk, Gtk
 
 from config.loguru_config import logger
 
@@ -25,13 +25,13 @@ except:
     )
 
 
-class WaylandWindowExclusivity(Enum):
+class WaylandWindowExclusivity(IntEnum):
     NONE = 1
     NORMAL = 2
     AUTO = 3
 
 
-class Layer(GObject.GEnum):
+class Layer(IntEnum):
     BACKGROUND = 0
     BOTTOM = 1
     TOP = 2
@@ -39,14 +39,14 @@ class Layer(GObject.GEnum):
     ENTRY_NUMBER = 4
 
 
-class KeyboardMode(GObject.GEnum):
+class KeyboardMode(IntEnum):
     NONE = 0
     EXCLUSIVE = 1
     ON_DEMAND = 2
     ENTRY_NUMBER = 3
 
 
-class Edge(GObject.GEnum):
+class Edge(IntEnum):
     LEFT = 0
     RIGHT = 1
     TOP = 2
@@ -54,24 +54,46 @@ class Edge(GObject.GEnum):
     ENTRY_NUMBER = 4
 
 
+def coerce_enum(enum_cls: type[IntEnum], value, default: IntEnum) -> IntEnum:
+    # Already correct type
+    if isinstance(value, enum_cls):
+        return value
+    # GI/Property gave us an int (common after switching a prop type to int)
+    if isinstance(value, int):
+        try:
+            return enum_cls(value)
+        except ValueError:
+            return default
+    if isinstance(value, str):
+        key = value.strip().replace("-", "_").upper()
+        aliases = {
+            "BACKGROUND": "BACKGROUND", "BOTTOM": "BOTTOM", "TOP": "TOP", "OVERLAY": "OVERLAY",
+            "NONE": "NONE", "EXCLUSIVE": "EXCLUSIVE", "ON_DEMAND": "ON_DEMAND", "AUTO": "AUTO", "NORMAL": "NORMAL",
+            "LEFT": "LEFT", "RIGHT": "RIGHT", "UP": "TOP", "DOWN": "BOTTOM",
+        }
+        key = aliases.get(key, key)
+        try:
+            return enum_cls[key]
+        except KeyError:
+            return default
+    return default
+
+
 class WaylandWindow(Window):
-    @Property(
-        Layer,
-        flags="read-write",
-        default_value=Layer.TOP,
-    )
-    def layer(self) -> Layer:  # type: ignore
-        return self._layer  # type: ignore
+    @Property(int, flags="read-write", default_value=Layer.TOP)
+    def layer(self) -> int:
+        return int(self._layer)
 
     @layer.setter
     def layer(
         self,
-        value: Literal["background", "bottom", "top", "overlay"] | Layer,
+        value: Literal["background", "bottom", "top", "overlay"] | Layer | int,
     ) -> None:
-        self._layer = get_enum_member(Layer, value, default=Layer.TOP)
-        return GtkLayerShell.set_layer(self, self._layer)
+        enum_val = coerce_enum(Layer, value, default=Layer.TOP)
+        self._layer = int(enum_val)
+        return GtkLayerShell.set_layer(self, int(enum_val))
 
-    @Property(int, "read-write")
+    @Property(object, "read-write")
     def monitor(self) -> int:
         if not (monitor := cast(Gdk.Monitor, GtkLayerShell.get_monitor(self))):
             return -1
@@ -92,19 +114,18 @@ class WaylandWindow(Window):
             else False
         )
 
-    @Property(WaylandWindowExclusivity, "read-write")
-    def exclusivity(self) -> WaylandWindowExclusivity:
-        return self._exclusivity
+    @Property(int, "read-write", default_value=int(WaylandWindowExclusivity.NONE))
+    def exclusivity(self) -> int:
+        return int(self._exclusivity)
+
 
     @exclusivity.setter
     def exclusivity(
-        self, value: Literal["none", "normal", "auto"] | WaylandWindowExclusivity
+        self, value: Literal["none", "normal", "auto"] | WaylandWindowExclusivity | int
     ) -> None:
-        value = get_enum_member(
-            WaylandWindowExclusivity, value, default=WaylandWindowExclusivity.NONE
-        )
-        self._exclusivity = value
-        match value:
+        enum_val = coerce_enum(WaylandWindowExclusivity, value, default=WaylandWindowExclusivity.NONE)
+        self._exclusivity = int(enum_val)
+        match WaylandWindowExclusivity(enum_val):
             case WaylandWindowExclusivity.NORMAL:
                 return GtkLayerShell.set_exclusive_zone(self, True)
             case WaylandWindowExclusivity.AUTO:
@@ -124,7 +145,7 @@ class WaylandWindow(Window):
         del region
         return
 
-    @Property(tuple[Edge, ...], "read-write")
+    @Property(object, "read-write")
     def anchor(self):
         return tuple(
             x
@@ -161,7 +182,7 @@ class WaylandWindow(Window):
 
         return
 
-    @Property(tuple[int, ...], flags="read-write")
+    @Property(object, flags="read-write")
     def margin(self) -> tuple[int, ...]:
         return tuple(
             GtkLayerShell.get_margin(self, x)
@@ -189,16 +210,10 @@ class WaylandWindow(Window):
     @keyboard_mode.setter
     def keyboard_mode(
         self,
-        value: Literal["none", "exclusive", "on-demand"] | KeyboardMode,
+        value: Literal["none", "exclusive", "on-demand"] | KeyboardMode | int,
     ):
-        GtkLayerShell.set_keyboard_mode(
-            self,
-            get_enum_member(
-                KeyboardMode,
-                value,
-                default=KeyboardMode.NONE,
-            ),
-        )
+        enumval = coerce_enum(KeyboardMode, value, default=KeyboardMode.NONE)
+        GtkLayerShell.set_keyboard_mode(self, enumval)
 
     def __init__(
         self,
@@ -265,11 +280,11 @@ class WaylandWindow(Window):
         )
         if monitor is not None:
             self.monitor = monitor
-        self.layer = layer
+        self.layer = int(coerce_enum(Layer, layer, Layer.TOP))
         self.anchor = anchor
         self.margin = margin
-        self.keyboard_mode = keyboard_mode
-        self.exclusivity = exclusivity
+        self.keyboard_mode = int(coerce_enum(KeyboardMode, keyboard_mode, KeyboardMode.NONE))
+        self.exclusivity = int(coerce_enum(WaylandWindowExclusivity, exclusivity, WaylandWindowExclusivity.NONE))
         self.pass_through = pass_through
         self._deferred_visible = visible
         self._deferred_all_visible = all_visible

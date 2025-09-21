@@ -33,7 +33,7 @@ class Calendar(Gtk.Box):
             self.current_day = self.current_day_date.day # Just to highlight in create_month_view
             self.previous_key = (self.current_year, self.current_month)
         elif self.view_mode == "week":
-            # current_shown_date is the first day (according to locale) of the current week
+            # the current_shown_date is the first day (according to locale) of the current week
             days_to_subtract = (self.current_day_date.weekday() - self.first_weekday + 7) % 7
             self.current_shown_date = self.current_day_date - timedelta(days=days_to_subtract)
             self.current_year = self.current_shown_date.year # For the header
@@ -100,7 +100,7 @@ class Calendar(Gtk.Box):
             date_of_first_day_of_week_config = origin_date + timedelta(days=first_weekday_val - 1)
             new_first_weekday = date_of_first_day_of_week_config.weekday() # Monday=0, ..., Sunday=6
             
-            # Update the first_weekday on main thread and refresh calendar if needed
+            # Update the first_weekday on the main thread and refresh calendar if needed
             GLib.idle_add(self._update_first_weekday, new_first_weekday)
         except Exception as e:
             logger.error(f"Unable to get locale first weekday: {e}")
@@ -110,7 +110,7 @@ class Calendar(Gtk.Box):
         """Update first weekday setting and refresh calendar if changed."""
         if self.first_weekday != new_first_weekday:
             self.first_weekday = new_first_weekday
-            # Clear cache and refresh calendar with new locale settings
+            # Clear cache and refresh the calendar with new locale settings
             self.month_views.clear()
             # Remove all current stack children to force regeneration
             for child in self.stack.get_children():
@@ -145,7 +145,7 @@ class Calendar(Gtk.Box):
             self.on_midnight()
         return True  # Continue the timer
 
-    def on_suspend_resume(self, connection, sender_name, object_path, interface_name, signal_name, parameters, user_data):
+    def on_suspend_resume(self):
         # Check date when resuming from suspend
         self.check_date_change()
 
@@ -289,7 +289,7 @@ class Calendar(Gtk.Box):
         grid = Gtk.Grid(column_homogeneous=True, row_homogeneous=False, name="calendar-grid-week-view") # Could have different style
         
         # The reference month for dimming is the month from first_day_of_week_to_display
-        # which is self.current_shown_date, and its month is self.current_month (updated in nav)
+        # that is self.current_shown_date, and its month is self.current_month (updated in nav)
         reference_month_for_dimming = first_day_of_week_to_display.month
 
         for col in range(7):
