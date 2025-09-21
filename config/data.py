@@ -2,7 +2,6 @@ import json
 import os
 
 import gi
-from aiofiles import stderr
 
 gi.require_version("Gtk", "3.0")
 from fabric.utils.helpers import get_relative_path
@@ -54,7 +53,7 @@ def load_config(config_path = DEFAULT_CONFIG_PATH):
             with open(config_path, "r") as f:
                 lconfig = json.load(f)
         except Exception as e:
-            stderr.write(f"Unable to load config: {e}")
+            print(f"Unable to load config: {e}")
 
     return lconfig
 
