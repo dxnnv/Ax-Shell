@@ -10,8 +10,10 @@ EXECUTABLE_PATH="$HOME/.local/bin/ax-shell"
 PACKAGES=(
   cava
   cliphist
-  dccutil
+  curl
+  ddcutil
   fabric-cli-git
+  fontconfig
   gobject-introspection
   gpu-screen-recorder
   hypridle
@@ -28,7 +30,7 @@ PACKAGES=(
   playerctl
   python-dateutil
   python-fabric-git
-#  python-gobject
+  python-gobject
 #  python-ijson
 #  python-numpy
 #  python-pillow
@@ -88,10 +90,10 @@ echo "Installing gray-git..."
 yes | $aur_helper -Syy --needed --devel --noconfirm gray-git || true
 
 echo "Installing required fonts..."
-
 FONT_URL="https://github.com/zed-industries/zed-fonts/releases/download/1.2.0/zed-sans-1.2.0.zip"
-FONT_DIR="$HOME/.fonts/zed-sans"
-TEMP_ZIP="/tmp/zed-sans-1.2.0.zip"
+LOCAL_FONTS="$HOME/.local/share/fonts"
+FONT_DIR="$LOCAL_FONTS/zed-sans"
+TEMP_ZIP="$(mktemp /tmp/zed-sans-XXXXXX.zip)"
 
 # Check if fonts are already installed
 if [ ! -d "$FONT_DIR" ]; then
@@ -103,37 +105,38 @@ if [ ! -d "$FONT_DIR" ]; then
     unzip -o "$TEMP_ZIP" -d "$FONT_DIR"
 
     echo "Cleaning up..."
-    rm "$TEMP_ZIP"
+    rm -f "$TEMP_ZIP"
 else
     echo "Fonts are already installed. Skipping download and extraction."
 fi
 
 # Copy local fonts if not already present
-if [ ! -d "$HOME/.fonts/tabler-icons" ]; then
-    echo "Copying local fonts to $HOME/.fonts/tabler-icons..."
-    mkdir -p "$HOME/.fonts/tabler-icons"
-    cp -r "$INSTALL_DIR/assets/fonts/"* "$HOME/.fonts"
+mkdir -p "$LOCAL_FONTS"
+if [ ! -d "$LOCAL_FONTS/tabler-icons" ]; then
+  echo "Copying bundled fonts into $LOCAL_FONTS..."
+  mkdir -p "$LOCAL_FONTS/tabler-icons"
+  cp -r "$INSTALL_DIR/assets/fonts/"* "$LOCAL_FONTS"
 else
-    echo "Local fonts are already installed. Skipping copy."
+  echo "Bundled fonts already present. Skipping copy."
 fi
 
-if [ ! "$(test "$EXECUTABLE_PATH")" ]; then
-	echo "Symlinking executable"
-	ln -s "$INSTALL_DIR/shell/run_shell.sh" "$EXECUTABLE_PATH"
-fi
+# Refresh font cache
+fc-cache -f "$LOCAL_FONTS" || true
 
-if [ "$(which uwm)" ]; then
-	echo "Installing service"
-  install -Dm0644 /dev/stdin "$XDG_CONFIG_HOME/systemd/user/ax-shell.service" "$INSTALL_DIR/shell/shell-template.service"
-fi
+install -d "$HOME/.local/bin"
+ln -sf "$INSTALL_DIR/shell/run_shell.sh" "$EXECUTABLE_PATH"
+
+install -Dm0644 "$INSTALL_DIR/shell/shell-template.service" \
+  "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/ax-shell.service"
 
 cd "$INSTALL_DIR"
+
+uv venv --python 3.13 --system-site-packages
 uv sync
-uv pip uninstall fabric
-uv pip install git+https://github.com/Fabric-Development/fabric
-uv pip uninstall PyGObject
-uv pip install PyGObject # TODO: Move the PyGObject installation into pyproject once its required version becomes available in UV.
-uv run config/config.py
+
+uv run python config/config.py
+
+systemctl --user daemon-reload
+echo "Installation complete."
 echo "Starting Ax-Shell..."
 "$INSTALL_DIR"/shell/restart_shell.sh init
-echo "Installation complete."
