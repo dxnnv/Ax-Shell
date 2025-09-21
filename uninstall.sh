@@ -10,9 +10,10 @@ fi
 
 rm -rf ~/.cache/ax-shell
 rm -rf ~/.config/Ax-Shell
+rm -f ~/.local/bin/ax-shell
+rm -f ~/.config/systemd/user/ax-shell.service
+systemctl --user daemon-reload
 
-rm ~/.local/bin/ax-shell
-rm ~/.config/systemd/user/ax-shell.service
 
 conf_file=~/.config/hypr/hyprland.conf
 tmp_file=$(mktemp)
