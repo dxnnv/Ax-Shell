@@ -90,9 +90,6 @@ class Notch(Window):
                         case "End":
                             anchor_val = "top right"
                             revealer_transition_type = "slide-down"
-                        case _:
-                            anchor_val = "top"
-                            revealer_transition_type = "slide-down"
                 elif data.BAR_POSITION == "Bottom":
                     match data.PANEL_POSITION:
                         case "Start":
@@ -103,9 +100,6 @@ class Notch(Window):
                             revealer_transition_type = "slide-up"
                         case "End":
                             anchor_val = "bottom right"
-                            revealer_transition_type = "slide-up"
-                        case _:
-                            anchor_val = "bottom"
                             revealer_transition_type = "slide-up"
 
         default_top_anchor_margin_str = "-40px 8px 8px 8px"
@@ -132,7 +126,7 @@ class Notch(Window):
 
         super().__init__(
             name="notch",
-            layer="top",
+            layer="overlay",
             anchor=anchor_val,
             margin=current_margin_str,
             keyboard_mode="none",
