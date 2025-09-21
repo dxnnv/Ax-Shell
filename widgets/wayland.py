@@ -124,30 +124,6 @@ class WaylandWindow(Window):
         del region
         return
 
-    @Property(
-        KeyboardMode,
-        "read-write",
-        default_value=KeyboardMode.NONE,
-    )
-    def keyboard_mode(self) -> KeyboardMode:
-        return self._keyboard_mode
-
-    @keyboard_mode.setter
-    def keyboard_mode(
-        self,
-        value: Literal[
-            "none",
-            "exclusive",
-            "on-demand",
-            "entry-number",
-        ]
-        | KeyboardMode,
-    ):
-        self._keyboard_mode = get_enum_member(
-            KeyboardMode, value, default=KeyboardMode.NONE
-        )
-        return GtkLayerShell.set_keyboard_mode(self, self._keyboard_mode)
-
     @Property(tuple[Edge, ...], "read-write")
     def anchor(self):
         return tuple(
@@ -215,7 +191,7 @@ class WaylandWindow(Window):
         self,
         value: Literal["none", "exclusive", "on-demand"] | KeyboardMode,
     ):
-        return GtkLayerShell.set_keyboard_mode(
+        GtkLayerShell.set_keyboard_mode(
             self,
             get_enum_member(
                 KeyboardMode,
