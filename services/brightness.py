@@ -104,13 +104,13 @@ class Brightness(Service):
             text = _strip_ansi(_coerce_text_from_proc_result(proc))
             buses = set(_parse_detect_output(text))
             if not buses:
-                logger.info(f"[.DETECT] DDC buses: None found")
+                logger.debug(f"[.DETECT] DDC buses: None found")
                 return
             merged = sorted(set(self._available) | buses)
             if merged != self._available:
                 self._available = merged
                 self.emit("displays_changed")
-                logger.info(f"[.DETECT] DDC buses: {self._available}")
+                logger.debug(f"[.DETECT] DDC buses: {self._available}")
             for b in self._available:
                 self._fetch_one(b)
 

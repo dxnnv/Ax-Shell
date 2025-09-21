@@ -61,7 +61,7 @@ if __name__ == "__main__":
     log_level = config.get("log_level", "INFO")
 
     # Setup logging
-    setup_logging(level="DEBUG", capture_stdlib=True)
+    setup_logging(level=log_level, capture_stdlib=True)
     logger = logger.bind(name="Ax-Shell", type="Main", tag="Main")
 
     GLib.idle_add(run_updater)
