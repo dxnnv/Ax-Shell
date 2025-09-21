@@ -28,9 +28,8 @@ PACKAGES=(
   nvtop
   openresolv
   playerctl
-  python-dateutil
-  python-fabric-git
   python-gobject
+#  python-dateutil
 #  python-ijson
 #  python-numpy
 #  python-pillow
