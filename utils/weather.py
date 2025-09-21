@@ -1,15 +1,20 @@
+import os
 import requests
+from typing import Tuple, Optional
 from config.loguru_config import logger
 
 logger = logger.bind(name="Weather", type="Utils")
 
+_MET_NO_CONTACT = os.getenv("AX_SHELL_CONTACT", "github.com/dxnnv/Ax-Shell")
+_APP_UA = os.getenv("AX_SHELL_UA", f"Ax-Shell/0.1 (+{_MET_NO_CONTACT})")
+
 class WeatherUtils:
-    """Utility class containing shared weather functionality"""
+    """Shared weather helpers: geolocation, UA, emoji/description mapping."""
 
     @staticmethod
-    def get_weather_emoji(weather_code):
-        """Map Met.no API weather codes to emojis"""
-        weather_emojis = {
+    def get_weather_emoji(weather_code: str) -> str:
+        code = (weather_code or "").lower()
+        mapping = {
             "clearsky_day": "☀️",
             "clearsky_night": "🌙",
             "fair_day": "🌤️",
@@ -35,16 +40,16 @@ class WeatherUtils:
             "lightrainshowers_night": "🌧️",
             "heavyrainshowers_night": "🌧️"
         }
-        return weather_emojis.get(weather_code.lower(), "🌡️")
+        return mapping.get(code, "🌡️")
 
     @staticmethod
-    def get_weather_description(weather_code):
-        """Get a human-readable weather description from weather code"""
-        weather_descriptions = {
+    def get_weather_description(weather_code: str) -> str:
+        code = (weather_code or "").lower()
+        mapping = {
             "clearsky_day": "Clear sky",
             "clearsky_night": "Clear night",
-            "fair_day": "Fair weather",
-            "fair_night": "Fair night",
+            "fair_day": "Fair",
+            "fair_night": "Fair",
             "partlycloudy_day": "Partly cloudy",
             "partlycloudy_night": "Partly cloudy",
             "cloudy": "Cloudy",
@@ -66,45 +71,58 @@ class WeatherUtils:
             "lightrainshowers_night": "Light rain showers",
             "heavyrainshowers_night": "Heavy rain showers"
         }
-        return weather_descriptions.get(weather_code.lower(), "Unknown conditions")
+        return mapping.get(code, "Unknown conditions")
 
     @staticmethod
-    def get_coordinates(session=None):
-        """Get coordinates using IP-based geolocation"""
-        if session is None:
-            session = requests.Session()
-
+    def _try_ip_provider(session: requests.Session) -> Optional[Tuple[float, float, str]]:
+        """Try providers in order; return (lat, lon, city) or None."""
+        headers = {"User-Agent": _APP_UA}
+        # 1) ipapi.co: anonymous, generous limits
         try:
-            response = session.get("https://ip-api.com/json/", timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                if data['status'] == 'success':
-                    lat = data.get('lat')
-                    lon = data.get('lon')
-                    city = data.get('city', 'Unknown')
-                    country = data.get('country', 'Unknown')
-                    city_name = f"{city}, {country}"
-                    logger.info(f"Auto-detected location: {city_name} ({lat}, {lon})")
-                    return lat, lon, city_name
-                else:
-                    logger.warning(f"Geolocation failed: {data.get('message', 'Unknown error')}")
-            else:
-                logger.warning(f"Geolocation service returned status code: {response.status_code}")
+            r = session.get("https://ipapi.co/json/", headers=headers, timeout=5)
+            if r.ok:
+                j = r.json()
+                lat, lon = float(j["latitude"]), float(j["longitude"])
+                city = j.get("city") or "Unknown Location"
+                return lat, lon, city
+            logger.debug(f"ipapi.co failed: {r.status_code} {r.text[:120]}")
         except Exception as e:
-            logger.error(f"Error fetching coordinates: {e}")
+            logger.debug(f"ipapi.co error: {e}")
+        return None
+
+    @staticmethod
+    def get_coordinates(session: Optional[requests.Session] = None) -> Tuple[float, float, str]:
+        """Get coordinates using env/config first, then IP-based geolookup with fallbacks."""
+        sess = session or requests.Session()
+
+        # Manual override via env
+        env_lat = os.getenv("AX_SHELL_LAT")
+        env_lon = os.getenv("AX_SHELL_LON")
+        env_city = os.getenv("AX_SHELL_CITY")
+        if env_lat and env_lon:
+            try:
+                lat, lon = float(env_lat), float(env_lon)
+                city = env_city or "Custom Location"
+                logger.debug(f"Using env coordinates: {lat}, {lon} ({city})")
+                return lat, lon, city
+            except Exception:
+                pass
+
+        # IP providers
+        found = WeatherUtils._try_ip_provider(sess)
+        if found:
+            return found
 
         # Fallback coordinates (New York)
         lat, lon = 40.7128, -74.0060
-        city_name = "Unknown Location"
+        city = "Unknown Location"
         logger.debug(f"Using fallback coordinates: {lat}, {lon}")
-        return lat, lon, city_name
+        return lat, lon, city
 
     @staticmethod
-    def get_met_api_url(lat, lon):
-        """Get the Met.no API URL for given coordinates"""
-        return f'https://api.met.no/weatherapi/locationforecast/2.0/compact?lat={lat}&lon={lon}&altitude=90'
+    def get_met_api_url(lat: float, lon: float) -> str:
+        return f"https://api.met.no/weatherapi/locationforecast/2.0/compact?lat={lat}&lon={lon}"
 
     @staticmethod
-    def get_user_agent(app_name="weather-app"):
-        """Get a proper User-Agent string for API requests"""
-        return f'{app_name}/1.0'
+    def get_user_agent(_app_name: str = "Ax-Shell") -> str:
+        return _APP_UA

@@ -259,7 +259,10 @@ class WeatherForecast(Box):
         url = WeatherUtils.get_met_api_url(self.lat, self.lon)
 
         try:
-            response = self.session.get(url, headers={'User-Agent': WeatherUtils.get_user_agent('weather-forecast-app')})
+            response = self.session.get(url,
+                headers={'User-Agent': WeatherUtils.get_user_agent()},
+                timeout=8
+            )
             if response.status_code == 200:
                 data = response.json()
                 timeseries = data["properties"]["timeseries"]
