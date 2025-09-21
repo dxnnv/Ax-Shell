@@ -1,36 +1,30 @@
-import requests
-import datetime
-import json
-from collections import OrderedDict
 import os
-import sys
 import time
+import json
+import requests
+from datetime import datetime, timedelta, timezone
 
-MAX_RETRIES = 5
-RETRY_DELAY = 3 # seconds
-output = {}
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.label import Label
+from gi.repository import GLib
+from config.loguru_config import logger
 
-GITHUB_USERNAME = os.getenv("GITHUB_USERNAME")
-GITHUB_PAT = os.getenv("GITHUB_PAT")
+logger = logger.bind(name="GitHub", type="Module")
 
-if not GITHUB_USERNAME or not GITHUB_PAT:
-    raise AssertionError("GITHUB_USERNAME or GITHUB_PAT not set in the system's environment.")
+_GQL = "https://api.github.com/graphql"
 
-today = datetime.date.today()
-start_of_week = today - datetime.timedelta(days=(today.weekday() + 1) % 7)
-from_date = start_of_week.isoformat() + "T00:00:00Z"
-to_date = today.isoformat() + "T23:59:59Z"
-
-query = """
-query($user: String!, $from: DateTime!, $to: DateTime!) {
-  user(login: $user) {
+_Q = """
+query($login: String!, $from: DateTime!, $to: DateTime!) {
+  user(login: $login) {
+    url
     contributionsCollection(from: $from, to: $to) {
       contributionCalendar {
+        totalContributions
         weeks {
           contributionDays {
             date
             contributionCount
-            weekday
           }
         }
       }
@@ -39,143 +33,66 @@ query($user: String!, $from: DateTime!, $to: DateTime!) {
 }
 """
 
-variables = {
-    "user": GITHUB_USERNAME,
-    "from": from_date,
-    "to": to_date
-}
+def _now_utc():
+    return datetime.now(timezone.utc)
 
-headers = {
-    "Authorization": f"Bearer {GITHUB_PAT}",
-    "Accept": "application/vnd.github.v4.idl"
-}
+class GitHub(Box):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(name="github", orientation="h", spacing=6, **kwargs)
+        self._sess = requests.Session()
+        self._username = os.getenv("GITHUB_USERNAME")
+        self._token = os.getenv("GITHUB_PAT")
+        self._profile_url = f"https://github.com/{self._username}" if self._username else "https://github.com"
 
-COLOR_SCHEME_DARK = {
-    0: "#202329",   # No contributions
-    1: "#0e4429",   # 1-3 commits
-    2: "#006d32",   # 4-6 commits
-    3: "#26a641",   # 7-9 commits
-    4: "#39d353"    # 10+ commits
-}
+        self.label = Label(name="github-label", markup=" loading…")
+        self.button = Button(name="github-button", child=self.label,
+                             on_clicked=self._open_profile)
+        self.add(self.button)
+        self.show_all()
 
-COLOR_SCHEME_LIGHT = {
-    0: "#ebedf0",   # No contributions
-    1: "#9be9a8",   # 1-3 commits
-    2: "#40c463",   # 4-6 commits
-    3: "#30a14e",   # 7-9 commits
-    4: "#216e39"    # 10+ commits
-}
+        if not self._username or not self._token:
+            logger.info("GitHub module disabled (missing GITHUB_USERNAME or GITHUB_PAT).")
+            self.set_visible(False)
+            return
 
-arg = sys.argv[1] if len(sys.argv) > 1 else ""
-theme = arg if arg in ["DARK", "LIGHT"] else "DARK"
+        self._refresh()
+        GLib.timeout_add_seconds(1800, self._refresh)  # every 30 minutes
 
-def get_color(count, theme):
-    """Return heatmap color based on commit count and theme."""
-    scheme = COLOR_SCHEME_DARK if theme == "DARK" else COLOR_SCHEME_LIGHT
+    def _open_profile(self, _btn):
+        os.system(f"xdg-open '{self._profile_url}' &")
 
-    if count == 0:
-        return scheme[0]
-    elif 1 <= count <= 3:
-        return scheme[1]
-    elif 4 <= count <= 6:
-        return scheme[2]
-    elif 7 <= count <= 9:
-        return scheme[3]
-    else:
-        return scheme[4]
+    def _refresh(self) -> bool:
+        GLib.Thread.new("github-refresh", self._refresh_thread)
+        return True
 
-def get_weekday_name(name):
-    return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][(name + 1) % 7]
-
-
-for attempt in range(MAX_RETRIES):
-    try:
-        if attempt > 0:
-            time.sleep(RETRY_DELAY)
-
-        response = requests.post(
-            "https://api.github.com/graphql",
-            json={"query": query, "variables": variables},
-            headers=headers,
-            timeout=10
-        )
-        response.raise_for_status()
-        data = response.json()
-
-        weeks = data["data"]["user"]["contributionsCollection"]["contributionCalendar"]["weeks"]
-
-        contributions = OrderedDict()
-        for i in range(7):
-            day = start_of_week + datetime.timedelta(days=i)
-            contributions[day] = 0
-
-        for week in weeks:
-            for day in week["contributionDays"]:
-                date = datetime.date.fromisoformat(day["date"])
-                if start_of_week <= date <= today:
-                    contributions[date] = day["contributionCount"]
-
-        dots = []
-        tooltip_lines = []
-        total_contributions = 0
-
-        for date, count in contributions.items():
-            color = get_color(count, theme)
-            dots.append(f'<span foreground="{color}">■</span>')
-            weekday = get_weekday_name(date.weekday())
-            tooltip_lines.append(f"{weekday} ({date.day}/{date.month}): {count} contribution{'s' if count != 1 else ''}")
-            total_contributions += count
-
-        output = {
-            "text": " ".join(dots),
-            "tooltip": "\n".join([
-                f"GitHub Contributions ({start_of_week.strftime('%d/%m')} to {today.strftime('%d/%m')})",
-                f"Total: {total_contributions}"
-            ] + tooltip_lines),
-            "class": "github-contributions",
-            "alt": "GitHub Contributions"
-        }
-
-        break
-
-    except requests.exceptions.RequestException as e:
-        if attempt == MAX_RETRIES - 1:
-            output = {
-                "text": "⚠",
-                "tooltip": f"GitHub API error: {str(e)}",
-                "class": "error",
-                "alt": "GitHub Error"
+    def _refresh_thread(self):
+        try:
+            now = _now_utc()
+            week_ago = now - timedelta(days=7)
+            variables = {
+                "login": self._username,
+                "from": week_ago.isoformat(),
+                "to": now.isoformat(),
             }
-
-    except Exception as e:
-        output = {
-            "text": "⚠",
-            "tooltip": f"Error: {str(e)}",
-            "class": "error",
-            "alt": "Error"
-        }
-        break  # break if it's not a retryable error
-
-
-print(json.dumps(output))
-
-# PAT Scope: Repository access → All repositories
-#
-# json:
-# "custom/gh_heatmap": {
-#   "exec": "sleep 1 & ~/.config/waybar/scripts/weekly_commits DARK/LIGHT",
-#   "return-type": "json",
-#   "interval": 2400,
-#   "tooltip": true,
-#   "on-click": "xdg-open https://github.com/<your-github-username>",
-#   "on-click-right": "~/.config/waybar/scripts/weekly_commits DARK/LIGHT"
-# }
-#
-# css:
-# #custom-gh_heatmap {
-#   color: #39d353;
-#   background: rgba(30, 30, 46,0.89); // Put your own background color
-#   border-radius: 6px;
-#   margin-right: 2px;
-#   padding: 0px 8px;
-# }
+            headers = {"Authorization": f"Bearer {self._token}"}
+            r = self._sess.post(_GQL, json={"query": _Q, "variables": variables}, headers=headers, timeout=8)
+            if r.status_code != 200:
+                raise RuntimeError(f"GitHub GraphQL {r.status_code}: {r.text[:120]}")
+            j = r.json()
+            cal = j["data"]["user"]["contributionsCollection"]["contributionCalendar"]
+            total = cal.get("totalContributions", 0)
+            # Compute today's contributions if present
+            today = _now_utc().date().isoformat()
+            today_count = 0
+            for w in cal.get("weeks", []):
+                for d in w.get("contributionDays", []):
+                    if d["date"] == today:
+                        today_count = d["contributionCount"]
+                        break
+            text = f" {total} last 7d • {today_count} today"
+            GLib.idle_add(self.label.set_label, text)
+            GLib.idle_add(self.set_visible, True)
+        except Exception as e:
+            logger.warning(f"GitHub module error: {e}")
+            GLib.idle_add(self.label.set_label, " error")
+            GLib.idle_add(self.set_visible, False)
