@@ -12,6 +12,9 @@ from gi.repository import Gdk, GLib, Gtk
 import config.data as data
 import modules.icons as icons
 
+from config.loguru_config import logger
+
+logger = logger.bind(name="tmux", type="Module")
 
 class TmuxManager(Box):
     def __init__(self, **kwargs):
@@ -144,7 +147,7 @@ class TmuxManager(Box):
                 return [s.strip() for s in result.stdout.strip().split('\n') if s.strip()]
             return []
         except Exception as e:
-            print(f"Error getting tmux sessions: {e}")
+            logger.error(f"Unable to get tmux sessions: {e}")
             return []
 
     def create_session_slot(self, session_name):
@@ -379,7 +382,7 @@ class TmuxManager(Box):
             self.close_manager()
             
         except Exception as e:
-            print(f"Error creating tmux session: {e}")
+            logger.error(f"Unable to create tmux session: {e}")
 
     def attach_to_session(self, session_name):
         """Attach to an existing tmux session"""
@@ -389,7 +392,7 @@ class TmuxManager(Box):
             exec_shell_command_async(terminal_cmd)
             self.close_manager()
         except Exception as e:
-            print(f"Error attaching to tmux session: {e}")
+            logger.error(f"Unable to attach to tmux session: {e}")
 
     def get_terminal_command(self, cmd):
         """Get terminal command based on configured terminal or available terminals"""
@@ -473,7 +476,7 @@ class TmuxManager(Box):
             self.refresh_sessions()
             
         except Exception as e:
-            print(f"Error renaming tmux session: {e}")
+            logger.error(f"Unable to rename tmux session: {e}")
 
     def kill_session(self, session_name):
         """Kill a tmux session"""
@@ -491,13 +494,13 @@ class TmuxManager(Box):
             self.close_manager()
             
         except Exception as e:
-            print(f"Error killing tmux session: {e}")
+            logger.error(f"Unable to kill tmux session: {e}")
 
     # Add new method to handle key presses on session slots
     def on_slot_key_press(self, button, event, session_name, label, entry):
         """Handle key presses on session buttons"""
         # Print debugging info
-        print(f"Key pressed: {event.keyval}, State: {event.state}")
+        logger.debug(f"Key pressed: {event.keyval}, State: {event.state}")
         
         # Check if 'r' key was pressed for renaming
         if event.keyval == Gdk.KEY_r:
@@ -505,12 +508,12 @@ class TmuxManager(Box):
             return True
         # Check for 'K' (capital K) which indicates Shift is pressed
         elif event.keyval == Gdk.KEY_K:
-            print("Shift+K detected - killing session without confirmation")
+            logger.debug("Shift+K detected - killing session without confirmation")
             self.kill_session(session_name)
             return True
         # Check for lowercase 'k'
         elif event.keyval == Gdk.KEY_k:
-            print("Regular k detected - showing confirmation")
+            logger.debug("Regular k detected - showing confirmation")
             self.show_kill_confirmation_menu(button, session_name)
             return True
         # Check if Delete key was pressed for killing session

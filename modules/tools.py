@@ -6,7 +6,6 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from gi.repository import Gdk, GLib
-from loguru import logger
 
 import config.data as data
 import modules.icons as icons

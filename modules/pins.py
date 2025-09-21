@@ -22,6 +22,10 @@ from watchdog.observers import Observer
 
 import modules.icons as icons
 
+from config.loguru_config import logger
+
+logger = logger.bind(name="Pins", type="Module")
+
 SAVE_FILE = os.path.expanduser("~/.pins.json")
 
 icon_size = 80
@@ -42,13 +46,13 @@ def open_file(filepath):
     try:
         subprocess.Popen(["xdg-open", filepath])
     except Exception as e:
-        print("Error opening file:", e)
+        logger.error("Unable to open file:", e)
 
 def open_url(url):
     try:
         subprocess.Popen(["xdg-open", url])
     except Exception as e:
-        print("Error opening URL:", e)
+        logger.error("Unable to open URL:", e)
 
 def is_url(text):
 
@@ -84,7 +88,7 @@ def download_favicon(url, callback):
 
             GLib.idle_add(callback, temp_path)
         except Exception as e:
-            print(f"Error downloading favicon: {e}")
+            logger.error(f"Unable to download favicon: {e}")
 
             if temp_file and os.path.exists(temp_file):
                 try:
@@ -163,7 +167,7 @@ class Cell(Gtk.EventBox):
                 os.remove(self.favicon_temp_path)
                 self.favicon_temp_path = None
             except Exception as e:
-                print(f"Error removing temp favicon: {e}")
+                logger.error(f"Unable to remove temp favicon: {e}")
         
         for child in self.box.get_children():
             self.box.remove(child)
@@ -236,7 +240,7 @@ class Cell(Gtk.EventBox):
 
             container.show_all()
         except Exception as e:
-            print(f"Error setting favicon: {e}")
+            logger.error(f"Unable to set favicon: {e}")
 
 
     def get_file_preview(self, filepath):
@@ -254,7 +258,7 @@ class Cell(Gtk.EventBox):
                 pixbuf = icon_theme.load_icon("default-folder", icon_size, 0)
                 return Gtk.Image.new_from_pixbuf(pixbuf)
             except Exception:
-                print("Error loading folder icon")
+                logger.error("Unable to load folder icon")
                 return Gtk.Image.new_from_icon_name("default-folder", Gtk.IconSize.DIALOG)
         
         if content_type and content_type.startswith("image/"):
@@ -263,14 +267,14 @@ class Cell(Gtk.EventBox):
                     filepath, width=icon_size, height=icon_size, preserve_aspect_ratio=True)
                 return Gtk.Image.new_from_pixbuf(pixbuf)
             except Exception as e:
-                print("Error loading image preview:", e)
+                logger.error("Unable to load image preview:", e)
         
         elif content_type and content_type.startswith("video/"):
             try:
                 pixbuf = icon_theme.load_icon("video-x-generic", icon_size, 0)
                 return Gtk.Image.new_from_pixbuf(pixbuf)
             except Exception:
-                print("Error loading video icon")
+                logger.error("Unable to load video icon")
                 return Gtk.Image.new_from_icon_name("video-x-generic", Gtk.IconSize.DIALOG)
         else:
             icon_name = "text-x-generic"
@@ -284,7 +288,7 @@ class Cell(Gtk.EventBox):
                 pixbuf = icon_theme.load_icon(icon_name, icon_size, 0)
                 return Gtk.Image.new_from_pixbuf(pixbuf)
             except Exception:
-                print("Error loading icon", icon_name)
+                logger.error("Unable to load icon", icon_name)
                 return Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.DIALOG)
 
     def on_drag_data_received(self, widget, drag_context, x, y, data, info, time):
@@ -297,7 +301,7 @@ class Cell(Gtk.EventBox):
                     self.content_type = 'file'
                     self.update_display()
                 except Exception as e:
-                    print("Error getting file from URI:", e)
+                    logger.error("Unable to get file from URI:", e)
         drag_context.finish(True, False, time)
 
     def on_drag_data_get(self, widget, drag_context, data, info, time):
@@ -373,7 +377,7 @@ class Cell(Gtk.EventBox):
                 os.remove(self.favicon_temp_path)
                 self.favicon_temp_path = None
             except Exception as e:
-                print(f"Error removing temp favicon: {e}")
+                logger.error(f"Unable to remove temp favicon: {e}")
         
         self.content = None
         self.content_type = None
@@ -448,7 +452,7 @@ class Pins(Gtk.Box):
             with open(SAVE_FILE, 'w') as f:
                 json.dump(state, f)
         except Exception as e:
-            print("Error saving state:", e)
+            logger.error("Unable to save state:", e)
 
     def load_state(self):
         if not os.path.exists(SAVE_FILE):
@@ -464,7 +468,7 @@ class Pins(Gtk.Box):
                     self.cells[i].content_type = content_type
                     self.cells[i].update_display()
         except Exception as e:
-            print("Error loading state:", e)
+            logger.error("Unable to load state:", e)
 
     def on_drag_data_received(self, widget, drag_context, x, y, data, info, time):
         if data.get_length() >= 0:
@@ -479,7 +483,7 @@ class Pins(Gtk.Box):
                             cell.update_display()
                             break
                 except Exception as e:
-                    print("Error getting file from URI:", e)
+                    logger.error("Unable to get file from URI:", e)
         drag_context.finish(True, False, time)
 
     def stop_monitoring(self):
