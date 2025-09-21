@@ -33,7 +33,7 @@ BASE_SCALE = 0.1  # Base scale factor for overview
 TARGET = [Gtk.TargetEntry.new("text/plain", Gtk.TargetFlags.SAME_APP, 0)]
 
 # Credit to Aylur for the createSurfaceFromWidget code
-def createSurfaceFromWidget(widget: Gtk.Widget) -> cairo.ImageSurface:
+def create_surface_from_widget(widget: Gtk.Widget) -> cairo.ImageSurface:
     alloc = widget.get_allocation()
     surface = cairo.ImageSurface(
         cairo.Format.ARGB32,
@@ -106,7 +106,7 @@ class HyprlandWindowButton(Button):
                 address, len(address)
             ),
             on_drag_begin=lambda _, context: Gtk.drag_set_icon_surface(
-                context, createSurfaceFromWidget(self)
+                context, create_surface_from_widget(self)
             ),
         )
 
@@ -216,7 +216,7 @@ class Overview(Box):
         self.workspace_start = 1
         self.workspace_end = 10
         
-        # Get monitor manager and workspace range
+        # Get the monitor manager and workspace range
         try:
             from utils.monitor_manager import get_monitor_manager
             self.monitor_manager = get_monitor_manager()

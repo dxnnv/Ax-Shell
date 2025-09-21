@@ -1,17 +1,12 @@
 import json
 import logging
 import subprocess
-import time
 
 import psutil
-from fabric.core.fabricator import Fabricator
-from fabric.utils.helpers import invoke_repeater
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.circularprogressbar import CircularProgressBar
-from fabric.widgets.eventbox import EventBox
 from fabric.widgets.label import Label
-from fabric.widgets.overlay import Overlay
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.scale import Scale
 from gi.repository import GLib
@@ -129,7 +124,7 @@ class MetricsProvider:
         return False
 
     def get_metrics(self):
-        return (self.cpu, self.mem, self.disk, self.gpu)
+        return self.cpu, self.mem, self.disk, self.gpu
 
     def get_gpu_info(self):
         try:

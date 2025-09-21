@@ -1,13 +1,12 @@
 import os
-import time
-import json
-import requests
 from datetime import datetime, timedelta, timezone
 
+import requests
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from gi.repository import GLib
+
 from config.loguru_config import logger
 
 logger = logger.bind(name="GitHub", type="Module")

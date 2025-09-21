@@ -1,7 +1,7 @@
 import requests
 
 
-class Units():
+class Units:
     def __init__(self):
         self.WEIGHT_CHART: dict[str, tuple[float, float]] = {
             "kilogram": (1, 1),
@@ -303,7 +303,7 @@ class Units():
         # We no longer use currency_converter here.
 
 
-class Conversion():
+class Conversion:
     def __init__(self):
         self.units = Units()
 
@@ -425,8 +425,8 @@ class Conversion():
 
     def clean_type(self, type: str) -> str:
         """
-        If it is currency (3 letters), it is capitalized.. 
-        If it ends in 's' (and is not 'celsius'), remove the 's' to 
+        If it is currency (3 letters), it is capitalized.
+        If it ends in 's' (and is not 'Celsius'), remove the 's' to
         the other units.
         """
         if len(type) == 3 and type.isalpha():

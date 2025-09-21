@@ -33,11 +33,9 @@ class Notch(Window):
         self.monitor_manager = None
         
         # Get monitor manager
-        try:
-            from utils.monitor_manager import get_monitor_manager
-            self.monitor_manager = get_monitor_manager()
-        except ImportError:
-            pass
+        from utils.monitor_manager import get_monitor_manager
+        self.monitor_manager = get_monitor_manager()
+
         is_panel_vertical = False
         if data.PANEL_THEME == "Panel":
             is_panel_vertical = data.VERTICAL
@@ -74,9 +72,6 @@ class Notch(Window):
                             revealer_transition_type = "slide-left"
                         case "End":
                             anchor_val = "right bottom"
-                            revealer_transition_type = "slide-left"
-                        case _:
-                            anchor_val = "right"
                             revealer_transition_type = "slide-left"
             else:
                 if data.BAR_POSITION == "Top":
@@ -520,7 +515,7 @@ class Notch(Window):
         self._open_notch_internal(widget_name)
     
     def _get_real_focused_monitor_id(self):
-        """Get the real focused monitor ID directly from Hyprland."""
+        """Get the real-focused monitor ID directly from Hyprland."""
         try:
             import json
             import subprocess
@@ -978,9 +973,9 @@ class Notch(Window):
             keychar = chr(keyval) if 32 <= keyval <= 126 else None
 
             is_valid_char = (
-                (keyval >= Gdk.KEY_a and keyval <= Gdk.KEY_z)
-                or (keyval >= Gdk.KEY_A and keyval <= Gdk.KEY_Z)
-                or (keyval >= Gdk.KEY_0 and keyval <= Gdk.KEY_9)
+                (Gdk.KEY_a <= keyval <= Gdk.KEY_z)
+                or (Gdk.KEY_A <= keyval <= Gdk.KEY_Z)
+                or (Gdk.KEY_0 <= keyval <= Gdk.KEY_9)
                 or keyval
                 in (Gdk.KEY_space, Gdk.KEY_underscore, Gdk.KEY_minus, Gdk.KEY_period)
             )
@@ -1001,9 +996,9 @@ class Notch(Window):
             keychar = chr(keyval) if 32 <= keyval <= 126 else None
 
             is_valid_char = (
-                (keyval >= Gdk.KEY_a and keyval <= Gdk.KEY_z)
-                or (keyval >= Gdk.KEY_A and keyval <= Gdk.KEY_Z)
-                or (keyval >= Gdk.KEY_0 and keyval <= Gdk.KEY_9)
+                (Gdk.KEY_a <= keyval <= Gdk.KEY_z)
+                or (Gdk.KEY_A <= keyval <= Gdk.KEY_Z)
+                or (Gdk.KEY_0 <= keyval <= Gdk.KEY_9)
                 or keyval
                 in (Gdk.KEY_space, Gdk.KEY_underscore, Gdk.KEY_minus, Gdk.KEY_period)
             )

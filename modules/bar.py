@@ -494,8 +494,6 @@ class Bar(Window):
                 self.bar_inner.add_style_class("left")
             case "Right":
                 self.bar_inner.add_style_class("right")
-            case _:
-                self.bar_inner.add_style_class("top")
 
         if data.VERTICAL:
             self.bar_inner.add_style_class("vertical")

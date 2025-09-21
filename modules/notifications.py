@@ -1324,7 +1324,7 @@ class NotificationContainer(Box):
                 self.stack.remove(notif_box)
             self.notifications.pop(i)
 
-            if new_index >= len(self.notifications) and len(self.notifications) > 0:
+            if new_index >= len(self.notifications) > 0:
                 new_index = len(self.notifications) - 1
 
             self.current_index = new_index

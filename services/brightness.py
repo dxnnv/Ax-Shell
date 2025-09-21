@@ -339,7 +339,7 @@ class Brightness(Service):
             logger.debug(f"[.KSL] Skipping set due to no mx, will be kicked after read (bus={bus})")
             return
 
-        # if we’ve already retried a couple times on this target, wait for a confirm read
+        # if we’ve already retried a couple of times on this target, wait for a confirmation read
         if self._set_retry_budget.get(bus, 0) > 2:
             logger.debug(f"[.KSL] Retry budget exceeded, waiting for confirm read (bus={bus})")
             GLib.timeout_add(120, lambda b=bus: (self._fetch_one(b, force=True), False)[1])

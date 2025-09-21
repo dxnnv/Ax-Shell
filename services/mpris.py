@@ -13,7 +13,7 @@ class PlayerctlImportError(ImportError):
     def __init__(self, *args):
         super().__init__("Playerctl is not installed, please install it first", *args)
 
-# Try to import Playerctl, raise custom error if not available
+# Try to import Playerctl, raise a custom error if not available
 try:
     gi.require_version("Playerctl", "2.0")
     from gi.repository import Playerctl

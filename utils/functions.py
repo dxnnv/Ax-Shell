@@ -48,7 +48,7 @@ def copy_theme(theme: str):
         with open(source_file, "r") as source_file:
             content = source_file.read()
 
-        # Open the destination file in write mode
+        # Open the destination file in 'write' mode
         with open(destination_file, "w") as destination_file:
             destination_file.write(content)
             logger.info(f"'{theme}' applied successfully.")
@@ -74,12 +74,12 @@ def validate_widgets(parsed_data, default_config):
                 )
 
 
-# Function to exclude keys from a dictionary        )
+# Function to exclude keys from a dictionary
 def exclude_keys(d: Dict, keys_to_exclude: List[str]) -> Dict:
     return {k: v for k, v in d.items() if k not in keys_to_exclude}
 
 
-# Function to format time in hours and minutes
+# Function to format time by hours and minutes
 def format_time(secs: int):
     mm, _ = divmod(secs, 60)
     hh, mm = divmod(mm, 60)
@@ -220,7 +220,7 @@ def ensure_dir_exists(path: str):
         os.makedirs(path)
 
 
-# Function to unique list
+# Function to a unique list
 def unique_list(lst) -> List:
     return list(set(lst))
 

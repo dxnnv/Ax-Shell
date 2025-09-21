@@ -2,11 +2,11 @@ from collections.abc import Iterable
 from enum import Enum
 from typing import Literal, cast, overload
 
-import gi
 import OpenGL.GL as GL
-from fabric import Application, Property, Signal
-from fabric.widgets.widget import Widget
+import gi
 from OpenGL.GL.shaders import compileProgram, compileShader
+from fabric import Property, Signal
+from fabric.widgets.widget import Widget
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
@@ -145,7 +145,7 @@ class Shadertoy(Gtk.GLArea, Widget):
         self._frame_time = self._start_time
         self._frame_count = 0
 
-        # to avoid a constant framerate we tell
+        # To avoid a constant framerate, we tell
         # gtk to render a frame whenever possible
         self._tick_id = self.add_tick_callback(lambda *_: (self.queue_draw(), True)[1])
 
@@ -184,7 +184,7 @@ class Shadertoy(Gtk.GLArea, Widget):
         self._program = self.do_bake_program()
 
         # NOTE: for this to work (alpha pixels) `self.set_has_alpha(True)` must be done
-        # this breaks some fragment shaders, for some reason, so i'm leaving it for anyone willing to use
+        # this breaks some fragment shaders, for some reason, so I'm leaving it for anyone willing to use
         GL.glEnable(GL.GL_BLEND)
         GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
 
@@ -192,8 +192,8 @@ class Shadertoy(Gtk.GLArea, Widget):
         GL.glBindBuffer(GL.GL_ARRAY_BUFFER, self._quad_vbo)
 
         # this is not so good, unless the introduction of numpy, we must do
-        # a hack to generate an array GL would accept, i've tried using
-        # the "array" python library but it doesn't seem to be working
+        # a hack to generate an array GL would accept, I've tried using
+        # the "array" python library, but it doesn't seem to be working
 
         # cast python type into GL type (list[float] -> arraybuf[GLfloat])
         quad_verts = (-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0)

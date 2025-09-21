@@ -153,7 +153,7 @@ class SystemTray(Box):
             except Exception as e:
                 logger.error(f"Activate error: {e}")
         elif event.button == Gdk.BUTTON_SECONDARY:
-            menu = getattr(item, 'get_menu', lambda: None)()
+            menu = getattr(item, 'get_menu', lambda: None)
             if isinstance(menu, Gtk.Menu):
                 menu.popup_at_widget(button, Gdk.Gravity.SOUTH_WEST,
                                      Gdk.Gravity.NORTH_WEST, event)

@@ -1,6 +1,4 @@
 from fabric.widgets.box import Box
-from fabric.widgets.button import Button
-from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.shapes import Corner
 
 from widgets.wayland import WaylandWindow as Window

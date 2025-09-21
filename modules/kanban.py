@@ -19,7 +19,7 @@ from config.loguru_config import logger
 
 logger = logger.bind(name="Kanban", type="Module")
 
-def createSurfaceFromWidget(widget: Gtk.Widget) -> cairo.ImageSurface:
+def create_surface_from_widget(widget: Gtk.Widget) -> cairo.ImageSurface:
     alloc = widget.get_allocation()
     surface = cairo.ImageSurface(cairo.Format.ARGB32, alloc.width, alloc.height)
     cr = cairo.Context(surface)
@@ -154,7 +154,7 @@ class KanbanNote(Gtk.EventBox):
         return False
 
     def on_drag_begin(self, widget, context):
-        surface = createSurfaceFromWidget(self)
+        surface = create_surface_from_widget(self)
         Gtk.drag_set_icon_surface(context, surface)
 
     def on_drag_data_get(self, widget, drag_context, data, info, time):
@@ -342,7 +342,7 @@ class Kanban(Gtk.Box):
         vertical_mode = True if data.PANEL_THEME == "Panel" and (data.BAR_POSITION in ["Left", "Right"] or data.PANEL_POSITION in ["Start", "End"]) else False
         
         for i, column in enumerate(self.columns):
-            if vertical_mode == False:
+            if not vertical_mode:
                 self.grid.attach(column, i, 0, 1, 1)
             else:
                 self.grid.attach(column, 0, i, 1, 1)

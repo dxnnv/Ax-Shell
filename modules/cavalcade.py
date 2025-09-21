@@ -29,13 +29,13 @@ def set_death_signal():
     process is killed, the child (cava) is automatically terminated.
     """
     libc = ctypes.CDLL("libc.so.6")
-    PR_SET_PDEATHSIG = 1
-    libc.prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
+    pr_set_pdeathsig = 1
+    libc.prctl(pr_set_pdeathsig, signal.SIGTERM)
 
 class Cava:
     """
     CAVA wrapper.
-    Launch cava process with certain settings and read output.
+    Launch the cava process with certain settings and read output.
     """
     NONE = 0
     RUNNING = 1
@@ -141,10 +141,10 @@ class Cava:
             self.start()
 
     def close(self):
-        """Stop cava process"""
+        """Stop the cava process"""
         self.state = self.CLOSING
         
-        # Stop IO watch first
+        # Stop to IO watch first
         if self.io_watch_id:
             GLib.source_remove(self.io_watch_id)
             self.io_watch_id = None
@@ -166,7 +166,7 @@ class Cava:
             finally:
                 self.fifo_dummy_fd = None
         
-        # Kill process if still running
+        # Kill the process if still running
         if self.process and self.process.poll() is None:
             try:
                 self.process.kill()
@@ -176,7 +176,7 @@ class Cava:
             except Exception:
                 pass
         
-        # Remove FIFO file
+        # Remove the FIFO file
         if os.path.exists(self.path):
             try:
                 os.remove(self.path)
@@ -270,7 +270,7 @@ class Spectrum:
         """Set drawing color with caching to avoid file reads on every frame"""
         color_file = get_relative_path("../styles/colors.css")
         try:
-            # Check if file has been modified
+            # Check if the file has been modified
             current_mtime = os.path.getmtime(color_file)
             if current_mtime != self._color_file_mtime or self._cached_color is None:
                 self._color_file_mtime = current_mtime
@@ -290,7 +290,7 @@ class Spectrum:
             self.color = self._cached_color
         except Exception:
             if self._cached_color is None:
-                # Fallback to default color
+                # Fallback to the default color
                 self._cached_color = Gdk.RGBA(red=0.647, green=0.784, blue=1.0, alpha=1.0)
                 self.color = self._cached_color
 

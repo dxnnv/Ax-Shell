@@ -1,7 +1,6 @@
-import os
 import subprocess
 
-from fabric.utils import exec_shell_command_async, idle_add, remove_handler
+from fabric.utils import exec_shell_command_async, remove_handler
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
@@ -11,7 +10,6 @@ from gi.repository import Gdk, GLib, Gtk
 
 import config.data as data
 import modules.icons as icons
-
 from config.loguru_config import logger
 
 logger = logger.bind(name="tmux", type="Module")

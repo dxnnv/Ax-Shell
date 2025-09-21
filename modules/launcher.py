@@ -145,7 +145,7 @@ class AppLauncher(Box):
         GLib.idle_add(clear_selection)
 
     def ensure_initialized(self):
-        """Make sure the launcher is initialized with apps list before opening"""
+        """Make sure the launcher is initialized with the apps list before opening"""
         if not hasattr(self, '_initialized'):
 
             self._all_apps = get_desktop_applications()
@@ -159,7 +159,7 @@ class AppLauncher(Box):
             self.update_calculator_viewport()
             return
         if query.startswith(";"):
-            # In conversion mode, update history view once (not per keystroke)
+            # In conversion mode, update the history view once (not per keystroke)
             self.update_conversion_viewport()
             return
         remove_handler(self._arranger_handler) if self._arranger_handler else None
@@ -172,9 +172,9 @@ class AppLauncher(Box):
                 return ""
             # Remove common shell wrappers
             if command_line.startswith("/bin/sh -c"):
-                # Handle wrapped commands like "/bin/sh -c "\$SHELL -i -c scrcpy""
+                # Handle wrapped commands like "/bin/sh -c \"\$SHELL -i -c scrcpy\""
                 return ""
-            # Split by spaces and take first part (the command)
+            # Split by spaces and take the first part (the command)
             cmd = command_line.split()[0] if command_line.split() else ""
             # Extract just the command name from full paths
             if "/" in cmd:

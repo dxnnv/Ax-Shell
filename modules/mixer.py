@@ -116,7 +116,7 @@ class MixerSlider(Scale):
             return False
 
     def _ensure_adjustment(self):
-        adj = getattr(self, "get_adjustment", lambda: None)()
+        adj = getattr(self, "get_adjustment", lambda: None)
         if adj is not None:
             return
         try:

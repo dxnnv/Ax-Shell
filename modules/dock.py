@@ -51,7 +51,7 @@ def read_config():
         config_data = {"pinned_apps": []}
     return config_data
 
-def createSurfaceFromWidget(widget: Gtk.Widget) -> cairo.ImageSurface:
+def create_surface_from_widget(widget: Gtk.Widget) -> cairo.ImageSurface:
     alloc = widget.get_allocation()
     surface = cairo.ImageSurface(
         cairo.Format.ARGB32,
@@ -314,7 +314,7 @@ class Dock(Window):
 
     def on_drag_begin(self, widget, drag_context):
         self._drag_in_progress = True
-        Gtk.drag_set_icon_surface(drag_context, createSurfaceFromWidget(widget))
+        Gtk.drag_set_icon_surface(drag_context, create_surface_from_widget(widget))
 
     def _on_hover_enter(self, *args):
         if self.integrated_mode: return 
@@ -800,8 +800,8 @@ class Dock(Window):
                 if child_item_loop.get_name() == "dock-separator":
                     separator_index = i; break
             cross_section_drag = (separator_index != -1 and
-                                 ((source_index < separator_index and target_index > separator_index) or
-                                  (source_index > separator_index and target_index < separator_index)))
+                                  ((source_index < separator_index < target_index) or
+                                   (source_index > separator_index > target_index)))
             
             child_item_to_move = children.pop(source_index) 
             children.insert(target_index, child_item_to_move)

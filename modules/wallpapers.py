@@ -6,14 +6,14 @@ import random  # <--- AÑADIDO
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 
+from PIL import Image
 from fabric.utils.helpers import exec_shell_command_async
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango
-from PIL import Image
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk
 
 import config.data as data
 import modules.icons as icons
@@ -46,7 +46,7 @@ class WallpaperSelector(Box):
         self.viewport = Gtk.IconView(name="wallpaper-icons")
         self.viewport.set_model(Gtk.ListStore(GdkPixbuf.Pixbuf, str))
         self.viewport.set_pixbuf_column(0)
-        # Hide text column so only the image is shown
+        # Hide the text column so only the image is shown
         self.viewport.set_text_column(-1)
         self.viewport.set_item_width(0)
         self.viewport.connect("item-activated", self.on_wallpaper_selected)
@@ -105,7 +105,7 @@ class WallpaperSelector(Box):
                     self.matugen_enabled = True
                 # Any other content defaults to True
         except FileNotFoundError:
-            # File doesn't exist, keep default True and create it on first toggle
+            # File doesn't exist, keep default True and create it on the first toggle
             pass
         except Exception as e:
             logger.error(f"Unable to read matugen state file: {e}")
@@ -158,7 +158,7 @@ class WallpaperSelector(Box):
 
         self.apply_color_button = Button(name="apply-color-button", child=Label(name="apply-color-label", markup=icons.accept))
         self.apply_color_button.connect("clicked", self.on_apply_color_clicked)
-        self.apply_color_button.set_vexpand(False) # Ensure button doesn't expand vertically
+        self.apply_color_button.set_vexpand(False) # Ensure the button doesn't expand vertically
         self.apply_color_button.set_valign(Gtk.Align.CENTER) # Center button vertically
 
         self.custom_color_selector_box = Box(
@@ -171,10 +171,8 @@ class WallpaperSelector(Box):
 
         # Add the scrolled window (grid) and the custom color selector box directly
         # to the main WallpaperSelector box (which is already vertical)
-        self.pack_start(self.scrolled_window, True, True, 0) # Add grid, expand
-        self.pack_start(self.custom_color_selector_box, False, False, 0) # Add custom selector, don't expand
-
-        # Removed the old main_content_box and its add
+        self.pack_start(self.scrolled_window, True, True, 0)
+        self.pack_start(self.custom_color_selector_box, False, False, 0)
 
         self._start_thumbnail_thread()
         self.connect("map", self.on_map)
@@ -193,7 +191,7 @@ class WallpaperSelector(Box):
         with os.scandir(data.WALLPAPERS_DIR) as entries:
             for entry in entries:
                 if entry.is_file() and self._is_image(entry.name):
-                    # Check if the file needs renaming: file should be lowercase and have hyphens instead of spaces
+                    # Check if the file needs renaming: should be lowercase and have hyphens instead of spaces
                     if entry.name != entry.name.lower() or " " in entry.name:
                         new_name = entry.name.lower().replace(" ", "-")
                         full_path = os.path.join(data.WALLPAPERS_DIR, entry.name)
@@ -205,7 +203,7 @@ class WallpaperSelector(Box):
                             logger.error(f"Unable to rename file {full_path}: {e}")
                         yield
 
-        # Process files in small batches to keep UI responsive
+        # Process files in small batches to keep the UI responsive
         file_list = os.listdir(data.WALLPAPERS_DIR)
         batch_size = 20
 
@@ -255,7 +253,7 @@ class WallpaperSelector(Box):
         selected_scheme = self.scheme_dropdown.get_active_id()
         current_wall = os.path.expanduser(f"~/.current.wall")
 
-        if os.path.isfile(current_wall) or os.path.islink(current_wall): # Check for link too
+        if os.path.isfile(current_wall) or os.path.islink(current_wall): # Check for a link too
             os.remove(current_wall)
         os.symlink(full_path, current_wall)
 
@@ -392,8 +390,8 @@ class WallpaperSelector(Box):
         # --- Determine Column Count ---
         columns = self.viewport.get_columns()
 
-        # If get_columns returns 0 or -1 (auto), try to estimate by checking item rows
-        if columns <= 0 and total_items > 0:
+        # If 'get_columns' returns 0 or -1 (auto), try to estimate by checking item rows
+        if columns <= 0 < total_items:
             estimated_cols = 0
             try:
                 # Check the row of the first item (should be 0)
@@ -408,13 +406,13 @@ class WallpaperSelector(Box):
                         estimated_cols = i # The number of items in the first row
                         break
 
-                # If loop finished without finding a new row, all items are in one row
+                # If the loop finished without finding a new row, all items are in one row
                 if estimated_cols == 0:
                     estimated_cols = total_items
 
                 columns = max(1, estimated_cols)
             except Exception:
-                # Fallback if get_item_row fails (e.g., widget not realized)
+                # Fallback if 'get_item_row' fails (e.g., widget not realized)
                 columns = 1
         elif columns <= 0 and total_items == 0:
              columns = 1 # Should not happen due to early return, but safe
@@ -427,7 +425,7 @@ class WallpaperSelector(Box):
         new_index = current_index
 
         if current_index == -1:
-            # If nothing is selected, select the first or last item based on direction
+            # If nothing is selected, select the first or last item based on the direction
             if keyval in (Gdk.KEY_Down, Gdk.KEY_Right):
                 new_index = 0
             elif keyval in (Gdk.KEY_Up, Gdk.KEY_Left):
@@ -435,7 +433,7 @@ class WallpaperSelector(Box):
             if total_items == 0: new_index = -1 # Handle edge case
 
         else:
-            # Calculate potential new index based on key press
+            # Calculate a potential new index based on key press
             if keyval == Gdk.KEY_Up:
                 potential_new_index = current_index - columns
                 # Only update if the new index is valid (>= 0)
@@ -447,7 +445,7 @@ class WallpaperSelector(Box):
                 if potential_new_index < total_items:
                     new_index = potential_new_index
             elif keyval == Gdk.KEY_Left:
-                # Only update if not already in the first column (index % columns != 0)
+                # Only update if not already in the first column (index % columns != 0),
                 # and the index is greater than 0
                 if current_index > 0 and current_index % columns != 0:
                     new_index = current_index - 1
@@ -528,7 +526,7 @@ class WallpaperSelector(Box):
         return False
 
     def on_map(self, widget):
-        """Handles the map signal to set initial visibility of the color selector."""
+        """Handles the map signal to set the initial visibility of the color selector."""
         # Set visibility based on the loaded state when the widget becomes visible
         self.custom_color_selector_box.set_visible(not self.matugen_enabled)
 

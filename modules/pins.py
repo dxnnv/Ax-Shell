@@ -8,9 +8,7 @@ import os
 import re
 import subprocess
 import tempfile
-import urllib.parse
-import urllib.request
-from pathlib import Path
+from urllib import parse, request
 
 import cairo
 from fabric.widgets.box import Box
@@ -32,7 +30,7 @@ icon_size = 80
 if data.PANEL_THEME == "Panel" and data.BAR_POSITION in ["Left", "Right"] or data.PANEL_POSITION in ["Start", "End"]:
     icon_size = 36
 
-def createSurfaceFromWidget(widget: Gtk.Widget) -> cairo.ImageSurface:
+def create_surface_from_widget(widget: Gtk.Widget) -> cairo.ImageSurface:
     alloc = widget.get_allocation()
     surface = cairo.ImageSurface(cairo.Format.ARGB32, alloc.width, alloc.height)
     cr = cairo.Context(surface)
@@ -67,7 +65,7 @@ def is_url(text):
 
 def get_favicon_url(url):
     """Extract the base domain from a URL and construct a favicon URL."""
-    parsed_url = urllib.parse.urlparse(url)
+    parsed_url = parse.urlparse(url)
     base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
     return f"{base_url}/favicon.ico"
 
@@ -78,14 +76,9 @@ def download_favicon(url, callback):
     def do_download():
         temp_file = None
         try:
-
             temp_fd, temp_path = tempfile.mkstemp(suffix='.ico')
             os.close(temp_fd)
-            
-
-            urllib.request.urlretrieve(favicon_url, temp_path)
-            
-
+            request.urlretrieve(favicon_url, temp_path)
             GLib.idle_add(callback, temp_path)
         except Exception as e:
             logger.error(f"Unable to download favicon: {e}")
@@ -316,7 +309,7 @@ class Cell(Gtk.EventBox):
     def on_drag_begin(self, widget, context):
 
         if self.content_type == 'file':
-            surface = createSurfaceFromWidget(self)
+            surface = create_surface_from_widget(self)
             Gtk.drag_set_icon_surface(context, surface)
 
     def on_button_press(self, widget, event):

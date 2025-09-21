@@ -173,7 +173,7 @@ def ensure_matugen_config():
             if os.path.exists(example_wallpaper_path):
                 try:
                     # If it already exists (possibly a broken link or regular file), delete and re-link
-                    if os.path.lexists(current_wall):  # lexists to not follow the link if it is one
+                    if os.path.lexists(current_wall):  # use lexists to not follow the link if it is one
                         os.remove(current_wall)
                     os.symlink(example_wallpaper_path, current_wall)
                     image_path = example_wallpaper_path
@@ -234,7 +234,7 @@ def load_bind_vars():
                         if not isinstance(bind_vars.get(vis_key), dict):
                             bind_vars[vis_key] = default_sub_dict.copy()
                         else:
-                            # If it is a dictionary, ensure that all sub-keys of DEFAULTS are present.
+                            # If it is a dictionary, ensure that all subkeys of DEFAULTS are present.
                             current_sub_dict = bind_vars[vis_key]
                             for m_key, m_val in default_sub_dict.items():
                                 if m_key not in current_sub_dict:
@@ -251,7 +251,7 @@ def generate_hyprconf() -> str:
     Generate the Hypr configuration string using the current bind_vars.
     """
     home = os.path.expanduser("~")
-    # Determine animation type based on bar position
+    # Determine an animation type based on bar position
     bar_position = bind_vars.get("bar_position", "Top")
     is_vertical = bar_position in ["Left", "Right"]
     animation_type = "slidefadevert" if is_vertical else "slidefade"
@@ -348,7 +348,7 @@ def ensure_face_icon():
 
 def backup_and_replace(src: str, dest: str, config_name: str):
     """
-    Backup the existing configuration file and replace it with a new one.
+    Create a backup of the existing configuration file and replace it with a new one.
     """
     try:
         if os.path.exists(dest):
@@ -366,7 +366,7 @@ def backup_and_replace(src: str, dest: str, config_name: str):
 
 def start_config():
     """
-    Run final configuration steps: ensure necessary configs, write the hyprconf, and reload.
+    Run final configuration steps: ensure the necessary configs are present, write the hyprconf, and reload.
     """
     logger.debug(f"{time.time():.4f}: start_config: Ensuring matugen config...")
     ensure_matugen_config()

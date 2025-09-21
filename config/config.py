@@ -4,7 +4,7 @@ from pathlib import Path
 
 def _configure_sys_path_for_direct_execution():
     """
-    Adjust sys.path if this script is run directly,
+    Adjust sys.path if this script is run directly
     to ensure that relative imports within the 'config' package work.
     This allows you to run `python config/config.py` from any directory.
     """
