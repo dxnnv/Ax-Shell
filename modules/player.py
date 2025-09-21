@@ -43,7 +43,14 @@ class PlayerBox(Box):
     def __init__(self, mpris_player=None):
         super().__init__(orientation="v", h_align="fill", spacing=0, h_expand=False, v_expand=not vertical_mode)
         self.mpris_player = mpris_player
-        self._progress_timer_id = None
+        
+        self._progress_timer_id = 0
+        self._wallpaper_monitor = None
+
+        # Stop/start timer when page visibility changes
+        self.connect("unmap", self._stop_progress_timer)
+        self.connect("destroy", self._stop_progress_timer)
+        self.connect("map", self._try_start_progress_timer)
 
         self.cover = CircleImage(
             name="player-cover",
@@ -199,7 +206,9 @@ class PlayerBox(Box):
             self.time.set_text("--:-- / --:--")
 
     def _apply_mpris_properties(self):
+        self._stop_progress_timer()
         mp = self.mpris_player
+
         self.title.set_visible(bool(mp.title and mp.title.strip()))
         if mp.title and mp.title.strip():
             self.title.set_text(mp.title)
@@ -230,26 +239,23 @@ class PlayerBox(Box):
         self.progressbar.set_visible(True)
         self.time.set_visible(True)
 
-        player_name = mp.player_name.lower() if hasattr(mp, "player_name") and mp.player_name else ""
-        can_seek = hasattr(mp, "can_seek") and mp.can_seek
+        player_name = (mp.player_name or "").lower() if hasattr(mp, "player_name") else ""
+        can_seek = bool(getattr(mp, "can_seek", False))
 
         if player_name == "firefox" or not can_seek:
-            # Firefox and non-seekable players don't support progress tracking
             self.backward.add_style_class("disabled")
             self.forward.add_style_class("disabled")
             self.progressbar.set_value(0.0)
             self.time.set_text("--:-- / --:--")
-            # Stop the timer since we can't track progress
-            if self._progress_timer_id:
-                GLib.source_remove(self._progress_timer_id)
-                self._progress_timer_id = None
+            # timer already stopped above
         else:
-            # Enable seeking controls
             self.backward.remove_style_class("disabled")
             self.forward.remove_style_class("disabled")
-            
-            # Use adaptive timer based on playback status instead of fixed 1-second polling
-            self._start_adaptive_progress_timer()
+            # Start only if the widget is actually shown
+            if self.get_mapped():
+                self._try_start_progress_timer()
+            else:
+                pass
 
         if hasattr(mp, "can_go_previous") and mp.can_go_previous:
              self.prev.remove_style_class("disabled")
@@ -260,6 +266,25 @@ class PlayerBox(Box):
              self.next.remove_style_class("disabled")
         else:
              self.next.add_style_class("disabled")
+
+    def _try_start_progress_timer(self, *a):
+        # Only for seekable players
+        if (not self.mpris_player) or (not getattr(self.mpris_player, "can_seek", False)):
+            return
+        if self._progress_timer_id:
+            return
+        # Match your “adaptive” cadence
+        playing = getattr(self.mpris_player, "playback_status", "").lower() == "playing"
+        interval = 1000 if playing else 5000
+        self._progress_timer_id = GLib.timeout_add(interval, self._update_progress)
+        # Immediate refresh, but only if mapped
+        if self.get_mapped():
+            self._update_progress()
+
+    def _stop_progress_timer(self, *a):
+        if self._progress_timer_id:
+            GLib.source_remove(self._progress_timer_id)
+            self._progress_timer_id = 0
 
     def _start_adaptive_progress_timer(self):
         """Start progress timer with adaptive interval based on playback status"""
@@ -276,6 +301,13 @@ class PlayerBox(Box):
         self._update_progress()  # Update immediately
 
     def _set_cover_image(self, image_path):
+        if getattr(self, "_wallpaper_monitor", None):
+            try:
+                self._wallpaper_monitor.disconnect_by_func(self.on_wallpaper_changed)
+            except Exception:
+                pass
+            self._wallpaper_monitor = None
+
         if image_path and os.path.isfile(image_path):
             self.cover.set_image_from_file(image_path)
         else:
@@ -285,6 +317,17 @@ class PlayerBox(Box):
             monitor = file_obj.monitor_file(Gio.FileMonitorFlags.NONE, None)
             monitor.connect("changed", self.on_wallpaper_changed)
             self._wallpaper_monitor = monitor
+
+    def do_destroy(self):
+        # If Fabric widgets use GObject, this is called on destroy
+        self._stop_progress_timer()
+        if getattr(self, "_wallpaper_monitor", None):
+            try:
+                self._wallpaper_monitor.disconnect_by_func(self.on_wallpaper_changed)
+            except Exception:
+                pass
+            self._wallpaper_monitor = None
+        super().do_destroy()
 
     def _download_and_set_artwork(self, arturl):
         """
@@ -342,33 +385,36 @@ class PlayerBox(Box):
             self.mpris_player.next()
 
     def _update_progress(self):
-
-        if not self.mpris_player:
-
-            if self._progress_timer_id:
-                GLib.source_remove(self._progress_timer_id)
-                self._progress_timer_id = None
+        # If widget is not visible/mapped anymore, stop the timer.
+        if not self.get_mapped():
+            self._stop_progress_timer()
             return False
-
+    
+        mp = self.mpris_player
+        if not mp:
+            self._stop_progress_timer()
+            return False
+    
         try:
-            current = self.mpris_player.position
+            current = int(getattr(mp, "position", 0))
         except Exception:
             current = 0
+    
         try:
-            total = int(self.mpris_player.length or 0)
+            total = int(getattr(mp, "length", 0) or 0)
         except Exception:
             total = 0
-
+    
         if total <= 0:
             progress = 0.0
             self.time.set_text("--:-- / --:--")
-
         else:
-            progress = (current / total)
+            progress = max(0.0, min(1.0, current / total))
             self.time.set_text(f"{self._format_time(current)} / {self._format_time(total)}")
-
+    
+        # CircularProgressBar expects 0..1 — safe call
         self.progressbar.set_value(progress)
-        return True
+        return True  # keep running while mapped
 
     def _format_time(self, us):
         seconds = int(us / 1000000)
