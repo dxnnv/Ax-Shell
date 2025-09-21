@@ -1,9 +1,7 @@
 import json
 import os
-import shutil
 import subprocess
 import time
-from pathlib import Path
 
 import gi
 
@@ -17,7 +15,7 @@ from fabric.widgets.scale import Scale
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.stack import Stack
 from fabric.widgets.window import Window
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk # type: ignore
+from gi.repository import GdkPixbuf, GLib, Gtk # type: ignore
 from PIL import Image
 
 from .data import (
@@ -29,7 +27,9 @@ from .data import (
     PANEL_POSITION_KEY,
 )
 from .settings_utils import backup_and_replace, bind_vars, start_config
+from config.loguru_config import logger
 
+logger = logger.bind(name="Settings GUI", type="Config")
 
 class HyprConfGUI(Window):
     def __init__(self, show_lock_checkbox: bool, show_idle_checkbox: bool, **kwargs):
@@ -40,6 +40,7 @@ class HyprConfGUI(Window):
             **kwargs,
         )
 
+        self.entries = None
         self.set_resizable(bind_vars.get('settings_window_resizable', False))
 
         self.selected_face_icon = None
@@ -145,6 +146,7 @@ class HyprConfGUI(Window):
             ("Audio Mixer", "prefix_mixer", "suffix_mixer"),
             ("Emoji Picker", "prefix_emoji", "suffix_emoji"),
             ("Power Menu", "prefix_power", "suffix_power"),
+            ("Weather", 'prefix_weather', 'suffix_weather'),
             ("Toggle Caffeine", "prefix_caffeine", "suffix_caffeine"),
             ("Reload CSS", "prefix_css", "suffix_css"),
             (
@@ -221,7 +223,7 @@ class HyprConfGUI(Window):
             else:
                 self.face_image.set_from_icon_name("user-info", Gtk.IconSize.DIALOG)
         except Exception as e:
-            print(f"Error loading face icon: {e}")
+            logger.error(f"Unable to load face icon: {e}")
             self.face_image.set_from_icon_name("image-missing", Gtk.IconSize.DIALOG)
         face_image_container.add(self.face_image)
         top_grid.attach(face_image_container, 2, 1, 1, 1)
@@ -654,9 +656,7 @@ class HyprConfGUI(Window):
         selected_text = combo.get_active_text()
         if selected_text:
             bind_vars[NOTIF_POS_KEY] = selected_text
-            print(
-                f"Notification position updated in bind_vars: {bind_vars[NOTIF_POS_KEY]}"
-            )
+            logger.debug(f"Notification position updated in bind_vars: {bind_vars[NOTIF_POS_KEY]}")
 
     def create_system_tab(self):
         scrolled_window = ScrolledWindow(
@@ -713,7 +713,7 @@ class HyprConfGUI(Window):
             monitor_manager = get_monitor_manager()
             available_monitors = monitor_manager.get_monitors()
         except (ImportError, Exception) as e:
-            print(f"Could not get monitor info for settings: {e}")
+            logger.error(f"Could not get monitor info for settings: {e}")
             available_monitors = [{'id': 0, 'name': 'default'}]
         
         # Get current selection from config
@@ -1043,7 +1043,7 @@ class HyprConfGUI(Window):
                 )
                 self.face_image.set_from_pixbuf(pixbuf)
             except Exception as e:
-                print(f"Error loading selected face icon preview: {e}")
+                logger.error(f"Could not load selected face icon preview: {e}")
                 self.face_image.set_from_icon_name("image-missing", Gtk.IconSize.DIALOG)
         dialog.destroy()
 
@@ -1172,7 +1172,7 @@ class HyprConfGUI(Window):
             settings_utils.bind_vars.update(current_bind_vars_snapshot)
 
             start_time = time.time()
-            print(f"{start_time:.4f}: Background task started.")
+            logger.debug(f"{start_time:.4f}: Background task started.")
 
             config_json = os.path.expanduser(
                 f"~/.config/{APP_NAME_CAP}/config/config.json"
@@ -1181,12 +1181,12 @@ class HyprConfGUI(Window):
             try:
                 with open(config_json, "w") as f:
                     json.dump(settings_utils.bind_vars, f, indent=4)
-                print(f"{time.time():.4f}: Saved config.json.")
+                logger.debug(f"{time.time():.4f}: Saved config.json.")
             except Exception as e:
-                print(f"Error saving config.json: {e}")
+                logger.error(f"Unable to save config.json: {e}")
 
             if selected_icon_path:
-                print(f"{time.time():.4f}: Processing face icon...")
+                logger.debug(f"{time.time():.4f}: Processing face icon...")
                 try:
                     img = Image.open(selected_icon_path)
                     side = min(img.size)
@@ -1195,39 +1195,33 @@ class HyprConfGUI(Window):
                     cropped_img = img.crop((left, top, left + side, top + side))
                     face_icon_dest = os.path.expanduser("~/.face.icon")
                     cropped_img.save(face_icon_dest, format="PNG")
-                    print(f"{time.time():.4f}: Face icon saved to {face_icon_dest}")
+                    logger.debug(f"{time.time():.4f}: Face icon saved to {face_icon_dest}")
                     GLib.idle_add(self._update_face_image_widget, face_icon_dest)
                 except Exception as e:
-                    print(f"Error processing face icon: {e}")
-                print(f"{time.time():.4f}: Finished processing face icon.")
+                    logger.error(f"Unable to process face icon: {e}")
+                logger.debug(f"{time.time():.4f}: Finished processing face icon.")
 
             if replace_lock:
-                print(f"{time.time():.4f}: Replacing hyprlock config...")
-                src = os.path.expanduser(
-                    f"~/.config/{APP_NAME_CAP}/config/hypr/hyprlock.conf"
-                )
+                logger.debug(f"{time.time():.4f}: Replacing hyprlock config...")
+                src = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/config/hypr/hyprlock.conf")
                 dest = os.path.expanduser("~/.config/hypr/hyprlock.conf")
                 if os.path.exists(src):
                     backup_and_replace(src, dest, "Hyprlock")
                 else:
-                    print(f"Warning: Source hyprlock config not found at {src}")
-                print(f"{time.time():.4f}: Finished replacing hyprlock config.")
+                    logger.warning(f"Source hyprlock config not found at {src}")
+                logger.debug(f"{time.time():.4f}: Finished replacing hyprlock config.")
 
             if replace_idle:
-                print(f"{time.time():.4f}: Replacing hypridle config...")
-                src = os.path.expanduser(
-                    f"~/.config/{APP_NAME_CAP}/config/hypr/hypridle.conf"
-                )
+                logger.debug(f"{time.time():.4f}: Replacing hypridle config...")
+                src = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/config/hypr/hypridle.conf")
                 dest = os.path.expanduser("~/.config/hypr/hypridle.conf")
                 if os.path.exists(src):
                     backup_and_replace(src, dest, "Hypridle")
                 else:
-                    print(f"Warning: Source hypridle config not found at {src}")
-                print(f"{time.time():.4f}: Finished replacing hypridle config.")
+                    logger.warning(f"Source hypridle config not found at {src}")
+                logger.debug(f"{time.time():.4f}: Finished replacing hypridle config.")
 
-            print(
-                f"{time.time():.4f}: Checking/Appending hyprland.conf source string..."
-            )
+            logger.debug(f"{time.time():.4f}: Checking/Appending hyprland.conf source string...")
             hypr_path = os.path.expanduser("~/.config/hypr/hyprland.conf")
             try:
                 from .settings_constants import SOURCE_STRING
@@ -1246,25 +1240,23 @@ class HyprConfGUI(Window):
                     if needs_append:
                         with open(hypr_path, "a") as f:
                             f.write("\n" + SOURCE_STRING)
-                        print(f"Appended source string to {hypr_path}")
+                        logger.info(f"Appended source string to {hypr_path}")
                     else:
-                        print("Source string already present in hyprland.conf")
+                        logger.info("Source string already present in hyprland.conf")
                 else:
-                    print("Auto-append to hyprland.conf is disabled")
+                    logger.info("Auto-append to hyprland.conf is disabled")
             except Exception as e:
-                print(f"Error updating {hypr_path}: {e}")
-            print(
-                f"{time.time():.4f}: Finished checking/appending hyprland.conf source string."
-            )
+                logger.error(f"Unable to update {hypr_path}: {e}")
+            logger.debug(f"{time.time():.4f}: Finished checking/appending hyprland.conf source string.")
 
-            print(f"{time.time():.4f}: Running start_config()...")
+            logger.debug(f"{time.time():.4f}: Running start_config()...")
             start_config()
-            print(f"{time.time():.4f}: Finished start_config().")
+            logger.debug(f"{time.time():.4f}: Finished start_config().")
 
-            print(f"{time.time():.4f}: Initiating Ax-Shell restart using Popen...")
-            main_py = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/main.py")
+            logger.debug(f"{time.time():.4f}: Initiating Ax-Shell restart using Popen...")
+            main_folder = os.path.expanduser(f"~/.config/{APP_NAME_CAP}")
             kill_cmd = f"killall {APP_NAME}"
-            start_cmd = ["uwsm", "app", "--", "python", main_py]
+            start_cmd = ["uwsm", "--", "app", "uv", "run", "main_py"]
             try:
                 kill_proc = subprocess.Popen(
                     kill_cmd,
@@ -1273,33 +1265,32 @@ class HyprConfGUI(Window):
                     stderr=subprocess.DEVNULL,
                 )
                 kill_proc.wait(timeout=2)
-                print(f"{time.time():.4f}: killall process finished (o timed out).")
+                logger.debug(f"{time.time():.4f}: killall process finished (o timed out).")
             except subprocess.TimeoutExpired:
-                print("Warning: killall command timed out.")
+                logger.warning("killall command timed out.")
             except Exception as e:
-                print(f"Error running killall: {e}")
+                logger.error(f"Error running killall: {e}")
 
             try:
                 subprocess.Popen(
                     start_cmd,
+                    cwd=main_folder,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     start_new_session=True,
                 )
-                print(f"{APP_NAME_CAP} restart initiated via Popen.")
+                logger.info(f"{APP_NAME_CAP} restart initiated via Popen.")
             except FileNotFoundError as e:
-                print(f"Error restarting {APP_NAME_CAP}: Command not found ({e})")
+                logger.error(f"Unable to restart {APP_NAME_CAP}: Command not found ({e})")
             except Exception as e:
-                print(f"Error restarting {APP_NAME_CAP} via Popen: {e}")
+                logger.error(f"Unable to restart {APP_NAME_CAP} via Popen: {e}")
 
-            print(f"{time.time():.4f}: Ax-Shell restart commands issued via Popen.")
+            logger.debug(f"{time.time():.4f}: Ax-Shell restart commands issued via Popen.")
             end_time = time.time()
-            print(
-                f"{end_time:.4f}: Background task finished (Total: {end_time - start_time:.4f}s)."
-            )
+            logger.debug(f"{end_time:.4f}: Background task finished (Total: {end_time - start_time:.4f}s).")
 
         GLib.Thread.new("apply-reload-task", _apply_and_reload_task_thread, None)
-        print("Configuration apply/reload task started in background.")
+        logger.info("Configuration apply/reload task started in background.")
 
     def _update_face_image_widget(self, icon_path):
         try:
@@ -1307,7 +1298,7 @@ class HyprConfGUI(Window):
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(icon_path, 64, 64)
                 self.face_image.set_from_pixbuf(pixbuf)
         except Exception as e:
-            print(f"Error reloading face icon preview: {e}")
+            logger.error(f"Unable to reload face icon preview: {e}")
             if self.face_image and self.face_image.get_window():
                 self.face_image.set_from_icon_name("image-missing", Gtk.IconSize.DIALOG)
         return GLib.SOURCE_REMOVE
@@ -1506,7 +1497,7 @@ class HyprConfGUI(Window):
                 self.lock_switch.set_active(False)
             if self.idle_switch:
                 self.idle_switch.set_active(False)
-            print("Settings reset to defaults.")
+            logger.info("Settings reset to defaults.")
         dialog.destroy()
 
     def on_close(self, widget):

@@ -1,3 +1,4 @@
+import subprocess
 from .data import (
     APP_NAME,
     APP_NAME_CAP,
@@ -10,6 +11,7 @@ from .data import (
 
 SOURCE_STRING = f"""
 # {APP_NAME_CAP}
+{"exec-once = ax-shell" if not subprocess.run(["uwsm", "check", "is-active"]).returncode == 0 else ""}
 source = ~/.config/{APP_NAME_CAP}/config/hypr/{APP_NAME}.conf
 """
 
@@ -46,6 +48,8 @@ DEFAULTS = {
     "suffix_emoji": "PERIOD",
     "prefix_power": "SUPER",
     "suffix_power": "ESCAPE",
+    'prefix_weather': "SUPER ALT",
+    'suffix_weather': "J",
     "prefix_caffeine": "SUPER SHIFT",
     "suffix_caffeine": "M",
     "prefix_toggle": "SUPER CTRL",
@@ -103,4 +107,5 @@ DEFAULTS = {
     "limited_apps_history": ["Spotify"],
     "history_ignored_apps": ["Hyprshot"],
     "selected_monitors": [],  # Empty array means show on all monitors
+    "log_level": "INFO"
 }

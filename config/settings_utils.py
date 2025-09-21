@@ -3,21 +3,24 @@ import os
 import shutil
 import subprocess
 import time
-from pathlib import Path
 
 import gi
 import toml
 
 gi.require_version("Gtk", "3.0")
 from fabric.utils.helpers import exec_shell_command_async
-from gi.repository import GLib
+
+from config.loguru_config import logger
+
+logger = logger.bind(name="Settings Utils", type="Config")
 
 # Import settings_constants for DEFAULTS
 from . import settings_constants
-from .data import (APP_NAME, APP_NAME_CAP) # CONFIG_DIR, HOME_DIR are not used here directly
+from .data import (APP_NAME, APP_NAME_CAP)  # CONFIG_DIR, HOME_DIR are not used here directly
 
 # Global variable to store binding variables, managed by this module
 bind_vars = {}  # It is initialized as empty, load_bind_vars will populate it
+
 
 def deep_update(target: dict, update: dict) -> dict:
     """
@@ -91,29 +94,29 @@ def ensure_matugen_config():
                 "output_path": "~/.config/rofi/colors.rasi"
             },
             "gtk4": {
-              "input_path": "~/.config/Ax-Shell/config/matugen/templates/gtk-4.0/gtk.css",
-              "output_path": "~/.config/gtk-4.0/gtk.css"
+                "input_path": "~/.config/Ax-Shell/config/matugen/templates/gtk-4.0/gtk.css",
+                "output_path": "~/.config/gtk-4.0/gtk.css"
             },
             "gtk3": {
-              "input_path": "~/.config/Ax-Shell/config/matugen/templates/gtk-3.0/gtk.css",
-              "output_path": "~/.config/gtk-3.0/gtk.css"
+                "input_path": "~/.config/Ax-Shell/config/matugen/templates/gtk-3.0/gtk.css",
+                "output_path": "~/.config/gtk-3.0/gtk.css"
             },
             "qt5ct": {
-              "input_path": "~/.config/Ax-Shell/config/matugen/templates/qt/colors/Matugen.conf",
-              "output_path": "~/.config/qt5ct/colors/Matugen.conf"
+                "input_path": "~/.config/Ax-Shell/config/matugen/templates/qt/colors/Matugen.conf",
+                "output_path": "~/.config/qt5ct/colors/Matugen.conf"
             },
             "qt6ct": {
-              "input_path": "~/.config/Ax-Shell/config/matugen/templates/qt/colors/Matugen.conf",
-              "output_path": "~/.config/qt6ct/colors/Matugen.conf"
+                "input_path": "~/.config/Ax-Shell/config/matugen/templates/qt/colors/Matugen.conf",
+                "output_path": "~/.config/qt6ct/colors/Matugen.conf"
             },
             "wlogout": {
-              "input_path": "~/.config/Ax-Shell/config/matugen/templates/wayland/wlogout/colors.css",
-              "output_path": "~/.config/wlogout/colors.css"
+                "input_path": "~/.config/Ax-Shell/config/matugen/templates/wayland/wlogout/colors.css",
+                "output_path": "~/.config/wlogout/colors.css"
             },
             "pywalfox": {
-              "input_path": "~/.config/Ax-Shell/config/matugen/templates/wal/colors.json",
-              "output_path": "~/.cache/wal/colors.json",
-              "post_hook": "pywalfox update || true"
+                "input_path": "~/.config/Ax-Shell/config/matugen/templates/wal/colors.json",
+                "output_path": "~/.cache/wal/colors.json",
+                "post_hook": "pywalfox update || true"
             },
         },
     }
@@ -128,10 +131,10 @@ def ensure_matugen_config():
                 existing_config = toml.load(f)
             shutil.copyfile(config_path, config_path + ".bak")
         except toml.TomlDecodeError:
-            print(f"Warning: Could not decode TOML from {config_path}. A new default config will be created.")
+            logger.warning(f"Could not decode TOML from {config_path}. A new default config will be created.")
             existing_config = {}  # Reset if corrupted
         except Exception as e:
-            print(f"Error reading or backing up {config_path}: {e}")
+            logger.error(f"Error reading or backing up {config_path}: {e}")
             # existing_config might be partially loaded or empty.
             # Continue to attempt to merge with defaults.
 
@@ -149,23 +152,24 @@ def ensure_matugen_config():
         with open(config_path, "w") as f:
             toml.dump(merged_config, f)
     except Exception as e:
-        print(f"Error writing matugen config to {config_path}: {e}")
+        logger.error(f"Unable to write matugen config to {config_path}: {e}")
 
     current_wall = os.path.expanduser("~/.current.wall")
     hypr_colors = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/config/hypr/colors.conf")
     css_colors = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/styles/colors.css")
 
     if (
-        not os.path.exists(current_wall)
-        or not os.path.exists(hypr_colors)
-        or not os.path.exists(css_colors)
+            not os.path.exists(current_wall)
+            or not os.path.exists(hypr_colors)
+            or not os.path.exists(css_colors)
     ):
         os.makedirs(os.path.dirname(hypr_colors), exist_ok=True)
         os.makedirs(os.path.dirname(css_colors), exist_ok=True)
 
         image_path = ""
         if not os.path.exists(current_wall):
-            example_wallpaper_path = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/assets/wallpapers_example/example-1.jpg")
+            example_wallpaper_path = os.path.expanduser(
+                f"~/.config/{APP_NAME_CAP}/assets/wallpapers_example/example-1.jpg")
             if os.path.exists(example_wallpaper_path):
                 try:
                     # If it already exists (possibly a broken link or regular file), delete and re-link
@@ -174,7 +178,7 @@ def ensure_matugen_config():
                     os.symlink(example_wallpaper_path, current_wall)
                     image_path = example_wallpaper_path
                 except Exception as e:
-                    print(f"Error creating symlink for wallpaper: {e}")
+                    logger.error(f"Unable to create symlink for wallpaper: {e}")
         else:
             image_path = (
                 os.path.realpath(current_wall)
@@ -183,19 +187,19 @@ def ensure_matugen_config():
             )
 
         if image_path and os.path.exists(image_path):
-            print(f"Generating color theme from wallpaper: {image_path}")
+            logger.info(f"Generating color theme from wallpaper: {image_path}")
             try:
                 matugen_cmd = f"matugen image '{image_path}'"
                 exec_shell_command_async(matugen_cmd)
-                print("Matugen color theme generation initiated.")
+                logger.debug("Matugen color theme generation initiated.")
             except FileNotFoundError:
-                print("Error: matugen command not found. Please install matugen.")
+                logger.critical("Matugen command not found. Please install matugen.")
             except Exception as e:
-                print(f"Error initiating matugen: {e}")
+                logger.error(f"Unable to initiate matugen: {e}")
         elif not image_path:
-            print("Warning: No wallpaper path determined to generate matugen theme from.")
+            logger.warning("No wallpaper path determined to generate matugen theme from.")
         else:  # image_path exists but the file does not
-            print(f"Warning: Wallpaper at {image_path} not found. Cannot generate matugen theme.")
+            logger.warning(f"Wallpaper at {image_path} not found. Cannot generate matugen theme.")
 
 
 def load_bind_vars():
@@ -236,14 +240,10 @@ def load_bind_vars():
                                 if m_key not in current_sub_dict:
                                     current_sub_dict[m_key] = m_val
         except json.JSONDecodeError:
-            print(f"Warning: Could not decode JSON from {config_json}. Using defaults (already initialized).")
-            # bind_vars is already populated with DEFAULTS, no further action is needed here.
+            logger.warning(f"Could not decode JSON from {config_json}. Using defaults (already initialized).")
         except Exception as e:
-            print(f"Error loading config from {config_json}: {e}. Using defaults (already initialized).")
-            # bind_vars is already populated with DEFAULTS.
-    # else:
-    # If config_json does not exist, bind_vars is already populated with DEFAULTS.
-    # print(f"Config file {config_json} not found. Using defaults (already initialized).")
+            logger.error(f"Unable to load config from {config_json}: {e}. Using defaults (already initialized).")
+        # bind_vars is already populated with DEFAULTS.
 
 
 def generate_hyprconf() -> str:
@@ -256,7 +256,7 @@ def generate_hyprconf() -> str:
     is_vertical = bar_position in ["Left", "Right"]
     animation_type = "slidefadevert" if is_vertical else "slidefade"
 
-    return f"""exec-once = uwsm-app $(python {home}/.config/{APP_NAME_CAP}/main.py)
+    return f"""
 exec = pgrep -x "hypridle" > /dev/null || uwsm app -- hypridle
 exec-once = uwsm app -- swww-daemon
 exec-once =  wl-paste --type text --watch cliphist store
@@ -264,7 +264,7 @@ exec-once =  wl-paste --type image --watch cliphist store
 
 $fabricSend = fabric-cli exec {APP_NAME}
 
-bind = {bind_vars.get("prefix_restart", "SUPER ALT")}, {bind_vars.get("suffix_restart", "B")}, exec, killall {APP_NAME}; uwsm-app $(python {home}/.config/{APP_NAME_CAP}/main.py) # Reload {APP_NAME_CAP}
+bind = {bind_vars.get('prefix_restart', 'SUPER ALT')}, {bind_vars.get('suffix_restart', 'B')}, exec, {home}/.config/{APP_NAME_CAP}/shell/restart_shell.sh # Reload {APP_NAME_CAP}
 bind = {bind_vars.get("prefix_dash", "SUPER")}, {bind_vars.get("suffix_dash", "D")}, exec, $fabricSend 'notch.open_notch("dashboard")' # Dashboard
 bind = {bind_vars.get("prefix_pins", "SUPER")}, {bind_vars.get("suffix_pins", "Q")}, exec, $fabricSend 'notch.open_notch("pins")' # Pins
 bind = {bind_vars.get("prefix_kanban", "SUPER")}, {bind_vars.get("suffix_kanban", "N")}, exec, $fabricSend 'notch.open_notch("kanban")' # Kanban
@@ -278,9 +278,10 @@ bind = {bind_vars.get("prefix_randwall", "SUPER")}, {bind_vars.get("suffix_randw
 bind = {bind_vars.get("prefix_mixer", "SUPER")}, {bind_vars.get("suffix_mixer", "M")}, exec, $fabricSend 'notch.open_notch("mixer")' # Audio Mixer
 bind = {bind_vars.get("prefix_emoji", "SUPER")}, {bind_vars.get("suffix_emoji", "PERIOD")}, exec, $fabricSend 'notch.open_notch("emoji")' # Emoji Picker
 bind = {bind_vars.get("prefix_power", "SUPER")}, {bind_vars.get("suffix_power", "ESCAPE")}, exec, $fabricSend 'notch.open_notch("power")' # Power Menu
+bind = {bind_vars.get('prefix_weather', 'SUPER ALT')}, {bind_vars.get('suffix_weather', 'J')}, exec, $fabricSend 'notch.open_notch("weather")' # Weather
 bind = {bind_vars.get("prefix_caffeine", "SUPER SHIFT")}, {bind_vars.get("suffix_caffeine", "M")}, exec, $fabricSend 'notch.dashboard.widgets.buttons.caffeine_button.toggle_inhibit(external=True)' # Toggle Caffeine
 bind = {bind_vars.get("prefix_css", "SUPER SHIFT")}, {bind_vars.get("suffix_css", "B")}, exec, $fabricSend 'app.set_css()' # Reload CSS
-bind = {bind_vars.get("prefix_restart_inspector", "SUPER CTRL ALT")}, {bind_vars.get("suffix_restart_inspector", "B")}, exec, killall {APP_NAME}; uwsm-app $(GTK_DEBUG=interactive python {home}/.config/{APP_NAME_CAP}/main.py) # Restart with inspector
+bind = {bind_vars.get('prefix_restart_inspector', 'SUPER CTRL ALT')}, {bind_vars.get('suffix_restart_inspector', 'B')}, exec, killall {APP_NAME}; bash -c \"uwsm -- app \$(GTK_DEBUG=interactive uv run {home}/.config/{APP_NAME_CAP}/main.py)" # Restart with inspector
 
 # Wallpapers directory: {bind_vars.get("wallpapers_dir", "~/.config/Ax-Shell/assets/wallpapers_example")}
 
@@ -342,7 +343,7 @@ def ensure_face_icon():
         try:
             shutil.copy(default_icon_path, face_icon_path)
         except Exception as e:
-            print(f"Error copying default face icon: {e}")
+            logger.error(f"Unable to copy default face icon: {e}")
 
 
 def backup_and_replace(src: str, dest: str, config_name: str):
@@ -355,23 +356,23 @@ def backup_and_replace(src: str, dest: str, config_name: str):
             # Make sure the backup directory exists if it is different
             # os.makedirs(os.path.dirname(backup_path), exist_ok=True)
             shutil.copy(dest, backup_path)
-            print(f"{config_name} config backed up to {backup_path}")
+            logger.info(f"{config_name} config backed up to {backup_path}")
         os.makedirs(os.path.dirname(dest), exist_ok=True)  # Ensure dest directory exists
         shutil.copy(src, dest)
-        print(f"{config_name} config replaced from {src}")
+        logger.info(f"{config_name} config replaced from {src}")
     except Exception as e:
-        print(f"Error backing up/replacing {config_name} config: {e}")
+        logger.error(f"Unable to backup/replace {config_name} config: {e}")
 
 
 def start_config():
     """
     Run final configuration steps: ensure necessary configs, write the hyprconf, and reload.
     """
-    print(f"{time.time():.4f}: start_config: Ensuring matugen config...")
+    logger.debug(f"{time.time():.4f}: start_config: Ensuring matugen config...")
     ensure_matugen_config()
-    print(f"{time.time():.4f}: start_config: Ensuring face icon...")
+    logger.debug(f"{time.time():.4f}: start_config: Ensuring face icon...")
     ensure_face_icon()
-    print(f"{time.time():.4f}: start_config: Generating hypr conf...")
+    logger.debug(f"{time.time():.4f}: start_config: Generating hypr conf...")
 
     hypr_config_dir = os.path.expanduser(f"~/.config/{APP_NAME_CAP}/config/hypr/")
     os.makedirs(hypr_config_dir, exist_ok=True)
@@ -380,20 +381,20 @@ def start_config():
     try:
         with open(hypr_conf_path, "w") as f:
             f.write(generate_hyprconf())
-        print(f"Generated Hyprland config at {hypr_conf_path}")
+        logger.debug(f"Generated Hyprland config at {hypr_conf_path}")
     except Exception as e:
-        print(f"Error writing Hyprland config: {e}")
-    print(f"{time.time():.4f}: start_config: Finished generating hypr conf.")
+        logger.error(f"Unable to write Hyprland config: {e}")
+    logger.debug(f"{time.time():.4f}: start_config: Finished generating hypr conf.")
 
-    print(f"{time.time():.4f}: start_config: Initiating hyprctl reload...")
+    logger.debug(f"{time.time():.4f}: start_config: Initiating hyprctl reload...")
     try:
         # subprocess.run(["hyprctl", "reload"], check=True, capture_output=True, text=True)
         exec_shell_command_async("hyprctl reload")  # Keep async to avoid blocking
-        print(f"{time.time():.4f}: start_config: Hyprland configuration reload initiated.")
+        logger.debug(f"{time.time():.4f}: start_config: Hyprland configuration reload initiated.")
     except FileNotFoundError:
-        print("Error: hyprctl command not found. Cannot reload Hyprland.")
-    except (subprocess.CalledProcessError) as e:  # If we used subprocess.run with check=True
-        print(f"Error reloading Hyprland with hyprctl: {e}\nOutput:\n{e.stdout}\n{e.stderr}")
+        logger.critical("hyprctl command not found. Cannot reload Hyprland.")
+    except subprocess.CalledProcessError as e:  # If we used subprocess.run with check=True
+        logger.critical(f"Unable to reload Hyprland with hyprctl: {e}\nOutput:\n{e.stdout}\n{e.stderr}")
     except Exception as e:
-        print(f"An error occurred initiating hyprctl reload: {e}")
-    print(f"{time.time():.4f}: start_config: Finished initiating hyprctl reload.")
+        logger.error(f"An error occurred initiating hyprctl reload: {e}")
+    logger.debug(f"{time.time():.4f}: start_config: Finished initiating hyprctl reload.")
