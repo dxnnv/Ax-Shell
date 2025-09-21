@@ -15,6 +15,9 @@ import modules.icons as icons
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gdk, GLib, GObject, Gtk
 
+from config.loguru_config import logger
+
+logger = logger.bind(name="Kanban", type="Module")
 
 def createSurfaceFromWidget(widget: Gtk.Widget) -> cairo.ImageSurface:
     alloc = widget.get_allocation()
@@ -109,6 +112,12 @@ class KanbanNote(Gtk.EventBox):
         self.setup_ui()
         self.setup_dnd()
         self.connect("button-press-event", self.on_button_press)
+
+        if getattr(self, "_deferred_all_visible", False):
+            self.show_all()
+        elif getattr(self, "_deferred_visible", False):
+            self.show()
+
 
     def setup_ui(self):
         self.box = Gtk.Box(name="kanban-note", spacing=4)
@@ -213,7 +222,7 @@ class KanbanColumn(Gtk.Frame):
         self.scroller.set_vexpand(True)
         
         self.box.pack_start(self.scroller, True, True, 0)
-        self.box.pack_start(self.add_btn, False, False, 0)
+        #self.box.pack_start(self.add_btn, False, False, 0)
         self.add(self.box)
         self.show_all()
 
@@ -247,9 +256,17 @@ class KanbanColumn(Gtk.Frame):
         def on_canceled(editor):
             row.destroy()
 
-        def scroll_to_bottom():
-            adj = self.scroller.get_vadjustment()
-            adj.set_value(adj.get_upper())
+        def scroll_to_bottom(scroller):
+            adj = scroller.get_vadjustment()
+            if not adj:
+                # Adjustment not ready yet, try again on next idle
+                return True
+            upper = adj.get_upper()
+            page  = adj.get_page_size()
+            lower = adj.get_lower()
+            target = max(lower, upper - page)
+            adj.set_value(target)
+            return False
 
         editor.connect('confirmed', on_confirmed)
         editor.connect('canceled', on_canceled)
@@ -332,7 +349,12 @@ class Kanban(Gtk.Box):
             column.connect('changed', lambda x: self.save_state())
         
         self.load_state()
-        self.show_all()
+
+        if getattr(self, "_deferred_all_visible", False):
+            self.show_all()
+        elif getattr(self, "_deferred_visible", False):
+            self.show()
+
 
     def save_state(self):
         state = {
@@ -345,7 +367,7 @@ class Kanban(Gtk.Box):
             with open(self.STATE_FILE, "w") as f:
                 json.dump(state, f, indent=2)
         except Exception as e:
-            print(f"Error saving state: {e}")
+            logger.error(f"Unable to save state: {e}")
 
     def load_state(self):
         try:
@@ -361,4 +383,4 @@ class Kanban(Gtk.Box):
         except FileNotFoundError:
             pass
         except Exception as e:
-            print(f"Error loading state: {e}")
+            logger.error(f"Unable to load state: {e}")

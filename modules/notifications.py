@@ -13,25 +13,25 @@ from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from gi.repository import GdkPixbuf, GLib, Gtk
-from loguru import logger
 
 import config.data as data
+from config.loguru_config import logger
 import modules.icons as icons
 from widgets.image import CustomImage
 from widgets.wayland import WaylandWindow as Window
 
+logger = logger.bind(name="Notifications", type="Module")
+
 PERSISTENT_DIR = f"/tmp/{data.APP_NAME}/notifications"
 PERSISTENT_HISTORY_FILE = os.path.join(PERSISTENT_DIR, "notification_history.json")
-
-
 # Get configurable app lists from settings
 def get_limited_apps_history():
     config = data.load_config()
     return config.get("limited_apps_history", ["Spotify"])
 
-
 def get_history_ignored_apps():
     config = data.load_config()
+    
     return config.get("history_ignored_apps", ["Hyprshot"])
 
 
@@ -42,16 +42,11 @@ def cache_notification_pixbuf(notification_box):
     notification = notification_box.notification
     if notification.image_pixbuf:
         os.makedirs(PERSISTENT_DIR, exist_ok=True)
-        cache_file = os.path.join(
-            PERSISTENT_DIR, f"notification_{notification_box.uuid}.png"
-        )
-        logger.debug(
-            f"Caching image for notification {notification.id} to: {cache_file}"
-        )
+        cache_file = os.path.join(PERSISTENT_DIR, f"notification_{notification_box.uuid}.png")
+        logger.debug(f"Caching image for notification {notification.id} to: {cache_file}")
         try:
-            scaled = notification.image_pixbuf.scale_simple(
-                48, 48, GdkPixbuf.InterpType.BILINEAR
-            )
+            scaled = notification.image_pixbuf.scale_simple(48, 48, GdkPixbuf.InterpType.BILINEAR
+)
             scaled.savev(cache_file, "png", [], [])
             logger.info(
                 f"Successfully cached image for notification {notification.id} to: {cache_file}"
@@ -370,10 +365,10 @@ class NotificationBox(Box):
             on_clicked=lambda *_: self.notification.close("dismissed-by-user"),
         )
         self.close_button.connect(
-            "enter-notify-event", lambda *_: self.hover_button(self.close_button)
+            "enter-notify-event", lambda *_: self.hover_button()
         )
         self.close_button.connect(
-            "leave-notify-event", lambda *_: self.unhover_button(self.close_button)
+            "leave-notify-event", lambda *_: self.unhover_button()
         )
         return self.close_button
 
@@ -429,11 +424,11 @@ class NotificationBox(Box):
         self.stop_timeout()
         super().destroy()
 
-    def hover_button(self, button):
+    def hover_button(self):
         if self._container:
             self._container.pause_and_reset_all_timeouts()
 
-    def unhover_button(self, button):
+    def unhover_button(self):
         if self._container:
             self._container.resume_all_timeouts()
 
@@ -690,13 +685,9 @@ class NotificationHistory(Box):
 
         if removed_from_list:
             self.persistent_notifications = new_persistent_notifications
-            logger.info(
-                f"Notification with ID {target_note_id_str} was marked for removal from persistent_notifications list."
-            )
+            logger.info(f"Notification with ID {target_note_id_str} was marked for removal from persistent_notifications list.")
         else:
-            logger.warning(
-                f"Notification with ID {target_note_id_str} was NOT found in persistent_notifications list. The list remains unchanged."
-            )
+            logger.warning(f"Notification with ID {target_note_id_str} was NOT found in persistent_notifications list. The list remains unchanged.")
 
         self._save_persistent_history()
         container.destroy()
@@ -1432,3 +1423,7 @@ class NotificationPopup(Window):
                 children=[self.notification_container, self.show_box],
             )
         )
+        if getattr(self, "_deferred_all_visible", False):
+            self.show_all()
+        elif getattr(self, "_deferred_visible", False):
+            self.show()

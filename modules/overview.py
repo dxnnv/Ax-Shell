@@ -11,7 +11,6 @@ from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
-from loguru import logger
 
 import config.data as data
 import modules.icons as icons
@@ -19,7 +18,7 @@ import modules.icons as icons
 from utils.icon_resolver import IconResolver
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gdk, Gtk
+from gi.repository import Gdk, Gtk, GdkPixbuf
 
 screen = Gdk.Screen.get_default()
 CURRENT_WIDTH = screen.get_width()
@@ -27,6 +26,7 @@ CURRENT_HEIGHT = screen.get_height()
 
 icon_resolver = IconResolver()
 connection = Hyprland()
+
 BASE_SCALE = 0.1  # Base scale factor for overview
 
 # Credit to Aylur for the drag and drop code
@@ -46,7 +46,6 @@ def createSurfaceFromWidget(widget: Gtk.Widget) -> cairo.ImageSurface:
     cr.fill()
     widget.draw(cr)
     return surface
-
 
 class HyprlandWindowButton(Button):
     def __init__(
@@ -92,7 +91,7 @@ class HyprlandWindowButton(Button):
             icon_pixbuf = icon_pixbuf.scale_simple(
                 icon_size_main, 
                 icon_size_main, 
-                gi.repository.GdkPixbuf.InterpType.BILINEAR
+                GdkPixbuf.InterpType.BILINEAR
             )
 
         super().__init__(
@@ -101,11 +100,8 @@ class HyprlandWindowButton(Button):
             tooltip_text=title,
             size=size,
             on_clicked=self.on_button_click,
-            on_button_press_event=lambda _, event: connection.send_command(
-                f"/dispatch closewindow address:{address}"
-            )
-            if event.button == 3
-            else None,
+            on_button_press_event=lambda _, event: connection.send_command(f"/dispatch closewindow address:{address}")
+            if event.button == 3 else None,
             on_drag_data_get=lambda _s, _c, data, *_: data.set_text(
                 address, len(address)
             ),
@@ -154,7 +150,7 @@ class HyprlandWindowButton(Button):
             icon_pixbuf = icon_pixbuf.scale_simple(
                 icon_size_overlay, 
                 icon_size_overlay, 
-                gi.repository.GdkPixbuf.InterpType.BILINEAR
+                GdkPixbuf.InterpType.BILINEAR
             )
                 
         self.set_image(
@@ -175,12 +171,12 @@ class HyprlandWindowButton(Button):
 
 
 class WorkspaceEventBox(EventBox):
-    def __init__(self, workspace_id: int, fixed: Gtk.Fixed | None = None, monitor_width: int = None, monitor_height: int = None, monitor_scale: float = 1.0):
+    def __init__(self, workspace_id: int, fixed: Gtk.Fixed | None = None, monitor_width: int = 0, monitor_height: int = 0, monitor_scale: float = 1.0):
         self.fixed = fixed
         
         # Use provided monitor dimensions or fallback to current screen
-        width = monitor_width or CURRENT_WIDTH
-        height = monitor_height or CURRENT_HEIGHT
+        width = monitor_width if monitor_width > 0 else CURRENT_WIDTH
+        height = monitor_height if monitor_height > 0 else CURRENT_HEIGHT
         
         # Workspace containers should maintain consistent size across monitors
         # Only use BASE_SCALE, don't multiply by monitor_scale for the container
@@ -226,18 +222,8 @@ class Overview(Box):
             self.monitor_manager = get_monitor_manager()
             self.workspace_start, self.workspace_end = self.monitor_manager.get_workspace_range_for_monitor(monitor_id)
         except ImportError:
-            # Fallback if monitor manager not available
             pass
         
-        # Get monitor dimensions
-        monitor_width = CURRENT_WIDTH
-        monitor_height = CURRENT_HEIGHT
-        
-        if self.monitor_manager:
-            monitor_info = self.monitor_manager.get_monitor_by_id(monitor_id)
-            if monitor_info:
-                monitor_width = monitor_info['width']
-                monitor_height = monitor_info['height']
         # Initialize as a Box instead of a PopupWindow.
         super().__init__(name="overview", orientation="v", spacing=8, **kwargs)
         self.workspace_boxes: dict[int, Box] = {}
@@ -246,8 +232,6 @@ class Overview(Box):
         # Initialize app registry for better icon resolution
         self._all_apps = get_desktop_applications()
         self.app_identifiers = self._build_app_identifiers_map()
-        
-        # Remove the window_class_aliases dictionary completely
 
         connection.connect("event::openwindow", self.do_update)
         connection.connect("event::closewindow", self.do_update)
@@ -438,5 +422,4 @@ class Overview(Box):
             )
 
     def do_update(self, *_):
-        logger.info(f"[Overview] Updating for :{_[1].name}")
         self.update(signal_update=True)

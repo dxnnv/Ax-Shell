@@ -9,7 +9,10 @@ import gi
 from fabric.core.service import Property
 from fabric.utils.helpers import extract_css_values, get_enum_member
 from fabric.widgets.window import Window
-from loguru import logger
+
+from config.loguru_config import logger
+
+logger = logger.bind(name="Wayland", type="Widget")
 
 gi.require_version("Gtk", "3.0")
 
@@ -292,7 +295,8 @@ class WaylandWindow(Window):
         self.keyboard_mode = keyboard_mode
         self.exclusivity = exclusivity
         self.pass_through = pass_through
-        self.show_all() if all_visible is True else self.show() if visible is True else None
+        self._deferred_visible = visible
+        self._deferred_all_visible = all_visible
 
     def steal_input(self) -> None:
         return GtkLayerShell.set_keyboard_interactivity(self, True)
@@ -311,9 +315,7 @@ class WaylandWindow(Window):
 
     def do_handle_post_show_request(self) -> None:
         if not self.get_children():
-            logger.warning(
-                "[WaylandWindow] showing an empty window is not recommended, some compositors might freak out."
-            )
+            logger.warning("Showing an empty window is not recommended, some compositors might freak out.")
         self.pass_through = self._pass_through
         return
 

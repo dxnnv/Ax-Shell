@@ -281,6 +281,11 @@ class Dock(Window):
             self.conn.connect("event::workspace", self.check_hide)
         
         GLib.timeout_add_seconds(1, self.check_config_change)
+        if getattr(self, "_deferred_all_visible", False):
+            self.show_all()
+        elif getattr(self, "_deferred_visible", False):
+            self.show()
+
             
     def _build_app_identifiers_map(self):
         identifiers = {}
