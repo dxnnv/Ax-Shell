@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "This will permanently delete Ax-Shell cache, configuration, and remove its entry from hyprland.conf."
-read -p "Are you sure you want to continue? [y/N] " confirm
+read -rp "Are you sure you want to continue? [y/N] " confirm
 
 if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
     echo "Aborted."
@@ -10,6 +10,9 @@ fi
 
 rm -rf ~/.cache/ax-shell
 rm -rf ~/.config/Ax-Shell
+
+rm ~/.local/bin/ax-shell
+rm ~/.config/systemd/user/ax-shell.service
 
 conf_file=~/.config/hypr/hyprland.conf
 tmp_file=$(mktemp)

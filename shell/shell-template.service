@@ -1,0 +1,12 @@
+[Unit]
+Description=A hackable shell for Hyprland, powered by Fabric.
+After=graphical-session.target
+
+[Service]
+Type=exec
+ExecStart=$HOME/.local/bin/ax-shell
+Restart=on-failure
+Slice=app-graphical.slice
+
+[Install]
+WantedBy=graphical-session.target

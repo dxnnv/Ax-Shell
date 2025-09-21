@@ -4,12 +4,13 @@ set -e  # Exit immediately if a command fails
 set -u  # Treat unset variables as errors
 set -o pipefail  # Prevent errors in a pipeline from being masked
 
-REPO_URL="https://github.com/Axenide/Ax-Shell.git"
+REPO_URL="https://github.com/dxnnv/Ax-Shell.git"
 INSTALL_DIR="$HOME/.config/Ax-Shell"
+EXECUTABLE_PATH="$HOME/.local/bin/ax-shell"
 PACKAGES=(
-  brightnessctl
   cava
   cliphist
+  dccutil
   fabric-cli-git
   gobject-introspection
   gpu-screen-recorder
@@ -27,17 +28,18 @@ PACKAGES=(
   playerctl
   python-dateutil
   python-fabric-git
-  python-gobject
-  python-ijson
-  python-numpy
-  python-pillow
-  python-psutil
-  python-pywayland
-  python-requests
-  python-setproctitle
-  python-toml
-  python-tzlocal
-  python-watchdog
+#  python-gobject
+#  python-ijson
+#  python-numpy
+#  python-pillow
+#  python-psutil
+#  python-pywayland
+#  python-requests
+#  python-setproctitle
+#  python-toml
+#  python-tzlocal
+#  python-watchdog
+  uv
   swappy
   swww-git
   tesseract
@@ -115,9 +117,23 @@ else
     echo "Local fonts are already installed. Skipping copy."
 fi
 
-python "$INSTALL_DIR/config/config.py"
-echo "Starting Ax-Shell..."
-killall ax-shell 2>/dev/null || true
-uwsm app -- python "$INSTALL_DIR/main.py" > /dev/null 2>&1 & disown
+if [ ! "$(test "$EXECUTABLE_PATH")" ]; then
+	echo "Symlinking executable"
+	ln -s "$INSTALL_DIR/shell/run_shell.sh" "$EXECUTABLE_PATH"
+fi
 
+if [ "$(which uwm)" ]; then
+	echo "Installing service"
+  install -Dm0644 /dev/stdin "$XDG_CONFIG_HOME/systemd/user/ax-shell.service" "$INSTALL_DIR/shell/shell-template.service"
+fi
+
+cd "$INSTALL_DIR"
+uv sync
+uv pip uninstall fabric
+uv pip install git+https://github.com/Fabric-Development/fabric
+uv pip uninstall PyGObject
+uv pip install PyGObject # TODO: Move the PyGObject installation into pyproject once its required version becomes available in UV.
+uv run config/config.py
+echo "Starting Ax-Shell..."
+"$INSTALL_DIR"/shell/restart_shell.sh init
 echo "Installation complete."
