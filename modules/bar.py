@@ -9,7 +9,6 @@ from fabric.utils.helpers import exec_shell_command_async
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.datetime import DateTime
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from gi.repository import Gdk, GLib, Gtk # type: ignore
@@ -22,6 +21,10 @@ from modules.metrics import MetricsSmall
 from modules.systemtray import SystemTray
 from modules.weather import Weather
 from widgets.wayland import WaylandWindow as Window
+
+from config.loguru_config import logger
+
+logger = logger.bind(name="Bar", type="Module")
 
 CHINESE_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "〇"]
 
@@ -45,10 +48,27 @@ tooltip_tools = """<b>Toolbox</b>"""
 tooltip_overview = """<b>Overview</b>"""
 
 
+def on_button_enter(widget, _):
+    window = widget.get_window()
+    if window:
+        window.set_cursor(Gdk.Cursor.new_from_name(widget.get_display(), "hand2"))
+
+
+def on_button_leave(widget, event):
+    window = widget.get_window()
+    if window:
+        window.set_cursor(None)
+
+
+def on_button_clicked(*args):
+    exec_shell_command_async("notify-send 'Button pressed' 'It works!'")
+
+
 class Bar(Window):
-    def __init__(self, monitor_id: int = 0, **kwargs):
+    def __init__(self, monitor_id: int = 0, single_bar_mode: bool = True, **kwargs):
         self.monitor_id = monitor_id
-        
+        self.single_bar_mode = single_bar_mode
+
         super().__init__(
             name="bar",
             layer="top",
@@ -81,21 +101,16 @@ class Bar(Window):
             case _:
                 self.anchor_var = "left top right"
 
-        if data.VERTICAL:
-            match data.BAR_THEME:
-                case "Edge":
-                    self.margin_var = "-8px -8px -8px -8px"
-                case _:
+        match data.BAR_THEME:
+            case "Edge":
+                self.margin_var = "-8px -8px -8px -8px"
+            case _:
+                if data.VERTICAL:
                     self.margin_var = "-4px -8px -4px -4px"
-        else:
-            match data.BAR_THEME:
-                case "Edge":
-                    self.margin_var = "-8px -8px -8px -8px"
-                case _:
-                    if data.BAR_POSITION == "Bottom":
-                        self.margin_var = "-8px -4px -4px -4px"
-                    else:
-                        self.margin_var = "-4px -4px -8px -4px"
+                elif data.BAR_POSITION == "Bottom":
+                    self.margin_var = "-8px -4px -4px -4px"
+                else:
+                    self.margin_var = "-4px -4px -8px -4px"
 
         self.set_anchor(self.anchor_var)
         self.set_margin(self.margin_var)
@@ -185,8 +200,8 @@ class Bar(Window):
         )
 
         self.connection = get_hyprland_connection()
-        self.button_tools.connect("enter_notify_event", self.on_button_enter)
-        self.button_tools.connect("leave_notify_event", self.on_button_leave)
+        self.button_tools.connect("enter_notify_event", on_button_enter)
+        self.button_tools.connect("leave_notify_event", on_button_leave)
 
         self.systray = SystemTray()
 
@@ -226,8 +241,8 @@ class Bar(Window):
             on_clicked=lambda *_: self.search_apps(),
             child=Label(name="button-bar-label", markup=icons.apps),
         )
-        self.button_apps.connect("enter_notify_event", self.on_button_enter)
-        self.button_apps.connect("leave_notify_event", self.on_button_leave)
+        self.button_apps.connect("enter_notify_event", on_button_enter)
+        self.button_apps.connect("leave_notify_event", on_button_leave)
 
         self.button_power = Button(
             name="button-bar",
@@ -235,8 +250,8 @@ class Bar(Window):
             on_clicked=lambda *_: self.power_menu(),
             child=Label(name="button-bar-label", markup=icons.shutdown),
         )
-        self.button_power.connect("enter_notify_event", self.on_button_enter)
-        self.button_power.connect("leave_notify_event", self.on_button_leave)
+        self.button_power.connect("enter_notify_event", on_button_enter)
+        self.button_power.connect("leave_notify_event", on_button_leave)
 
         self.button_overview = Button(
             name="button-bar",
@@ -244,10 +259,11 @@ class Bar(Window):
             on_clicked=lambda *_: self.overview(),
             child=Label(name="button-bar-label", markup=icons.windows),
         )
-        self.button_overview.connect("enter_notify_event", self.on_button_enter)
-        self.button_overview.connect("leave_notify_event", self.on_button_leave)
+        self.button_overview.connect("enter_notify_event", on_button_enter)
+        self.button_overview.connect("leave_notify_event", on_button_leave)
 
-        self.control = ControlSmall()
+        self.control = ControlSmall(monitor_id=self.monitor_id,
+                                    single_bar_mode=self.single_bar_mode)
         self.metrics = MetricsSmall()
 
         self.apply_component_props()
@@ -486,6 +502,12 @@ class Bar(Window):
 
         self.systray._update_visibility()
         self.chinese_numbers()
+        
+        if getattr(self, "_deferred_all_visible", False):
+            self.show_all()
+        elif getattr(self, "_deferred_visible", False):
+            self.show()
+
 
     def on_seconds_display_changed(self, show_seconds: bool):
         self.show_seconds = show_seconds
@@ -548,24 +570,11 @@ class Bar(Window):
                     with open(config_file, "w") as f:
                         json.dump(config, f, indent=4)
                 except Exception as e:
-                    print(f"Error updating config file: {e}")
+                    logger.error(f"Unable to update config file: {e}")
 
             return self.component_visibility[component_name]
 
         return None
-
-    def on_button_enter(self, widget, event):
-        window = widget.get_window()
-        if window:
-            window.set_cursor(Gdk.Cursor.new_from_name(widget.get_display(), "hand2"))
-
-    def on_button_leave(self, widget, event):
-        window = widget.get_window()
-        if window:
-            window.set_cursor(None)
-
-    def on_button_clicked(self, *args):
-        exec_shell_command_async("notify-send 'Button pressed' 'It works!'")
 
     def search_apps(self):
         if self.notch:
@@ -624,7 +633,6 @@ class Bar(Window):
         show_seconds = getattr(self, "show_seconds", False)
 
         try:
-            import config.data as data
             show_seconds = getattr(data, 'DATETIME_SHOW_SECONDS', False)
             use_12h = getattr(data, 'DATETIME_12H_FORMAT', False)
         except Exception:
@@ -669,3 +677,10 @@ class Bar(Window):
             self.workspaces_num.add_style_class("chinese")
         else:
             self.workspaces_num.remove_style_class("chinese")
+
+    def set_notch(self, notch):
+        """Set the notch reference for widgets that need it"""
+        self.notch = notch
+        # Set notch reference for the weather widget so it can open the weather dashboard
+        if hasattr(self.weather, 'set_notch'):
+            self.weather.set_notch(notch)

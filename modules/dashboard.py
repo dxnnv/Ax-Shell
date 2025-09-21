@@ -1,9 +1,5 @@
-import random
-
 import gi
-from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
-from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.stack import Stack
 
@@ -11,13 +7,14 @@ import config.data as data
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+from gi.repository import GLib, Gtk
 
 import modules.icons as icons
 from modules.kanban import Kanban
 from modules.mixer import Mixer
 from modules.pins import Pins
 from modules.wallpapers import WallpaperSelector
+from modules.weather_forecast import WeatherForecast
 from modules.widgets import Widgets
 
 
@@ -40,6 +37,7 @@ class Dashboard(Box):
         self.pins = Pins()
         self.kanban = Kanban()
         self.wallpapers = WallpaperSelector()
+        self.weather_forecast = WeatherForecast()
         self.mixer = Mixer()
 
         self.stack = Stack(
@@ -54,15 +52,13 @@ class Dashboard(Box):
 
         self.stack.set_homogeneous(False)
 
-        self.switcher = Gtk.StackSwitcher(
-            name="switcher",
-            spacing=8,
-        )
+        self.switcher = Gtk.StackSwitcher(name="switcher")
 
         self.stack.add_titled(self.widgets, "widgets", "Widgets")
         self.stack.add_titled(self.pins, "pins", "Pins")
         self.stack.add_titled(self.kanban, "kanban", "Kanban")
         self.stack.add_titled(self.wallpapers, "wallpapers", "Wallpapers")
+        self.stack.add_titled(self.weather_forecast, "weather", "Weather")
         self.stack.add_titled(self.mixer, "mixer", "Mixer")
 
         self.switcher.set_stack(self.stack)
@@ -72,8 +68,14 @@ class Dashboard(Box):
 
         self.stack.connect("notify::visible-child", self.on_visible_child_changed)
 
-        self.add(self.switcher)
-        self.add(self.stack)
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
+
+        root.pack_start(self.switcher, False, False, 0)
+        self.stack.set_hexpand(True)
+        self.stack.set_vexpand(True)
+        root.pack_start(self.stack, True, True, 0)
+
+        super().add(root)
 
         if data.PANEL_THEME == "Panel" and (
             data.BAR_POSITION in ["Left", "Right"]
@@ -81,12 +83,17 @@ class Dashboard(Box):
         ):
             GLib.idle_add(self._setup_switcher_icons)
 
-        # Close on right click if the event isn't handled
+        # Close on right-click if the event isn't handled
         self.connect(
             "button-release-event",
             lambda widget, event: (event.button == 3 and self.notch.close_notch()),
         )
-        self.show_all()
+
+        if getattr(self, "_deferred_all_visible", False):
+            self.show_all()
+        elif getattr(self, "_deferred_visible", False):
+            self.show()
+
 
     def _setup_switcher_icons(self):
         icon_details_map = {
@@ -94,6 +101,7 @@ class Dashboard(Box):
             "Pins": {"icon": icons.pins, "name": "pins"},
             "Kanban": {"icon": icons.kanban, "name": "kanban"},
             "Wallpapers": {"icon": icons.wallpapers, "name": "wallpapers"},
+            "Weather": {"icon": icons.radar, "name": "weather"},
             "Mixer": {"icon": icons.speaker, "name": "mixer"},
         }
 
@@ -154,5 +162,7 @@ class Dashboard(Box):
             self.stack.set_visible_child(self.kanban)
         elif section_name == "wallpapers":
             self.stack.set_visible_child(self.wallpapers)
+        elif section_name == "weather":
+            self.stack.set_visible_child(self.weather_forecast)
         elif section_name == "mixer":
             self.stack.set_visible_child(self.mixer)

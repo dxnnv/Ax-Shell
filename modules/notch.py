@@ -23,6 +23,9 @@ from utils.icon_resolver import IconResolver
 from utils.occlusion import check_occlusion
 from widgets.wayland import WaylandWindow as Window
 
+from config.loguru_config import logger
+
+logger = logger.bind(name="Notch", type="Module")
 
 class Notch(Window):
     def __init__(self, monitor_id: int = 0, **kwargs):
@@ -427,6 +430,12 @@ class Notch(Window):
 
         self.connect("key-press-event", self.on_key_press)
 
+        if getattr(self, "_deferred_all_visible", False):
+            self.show_all()
+        elif getattr(self, "_deferred_visible", False):
+            self.show()
+
+
     def on_button_enter(self, widget, event):
         self.is_hovered = True
         window = widget.get_window()
@@ -481,7 +490,7 @@ class Notch(Window):
     def open_notch(self, widget_name: str):
         # Debug info for troubleshooting
         if hasattr(self, '_debug_monitor_focus') and self._debug_monitor_focus:
-            print(f"DEBUG: open_notch called on monitor {self.monitor_id} for widget '{widget_name}'")
+            logger.debug(f"open_notch called on monitor {self.monitor_id} for widget '{widget_name}'")
         
         # Handle monitor focus switching - always check real focused monitor from Hyprland
         if self.monitor_manager:
@@ -493,14 +502,14 @@ class Notch(Window):
                 # Update the monitor manager's focused monitor
                 self.monitor_manager._focused_monitor_id = real_focused_monitor_id
                 if hasattr(self, '_debug_monitor_focus') and self._debug_monitor_focus:
-                    print(f"DEBUG: Real focused monitor from Hyprland: {real_focused_monitor_id}")
+                    logger.debug(f"Real focused monitor from Hyprland: {real_focused_monitor_id}")
             
             focused_monitor_id = self.monitor_manager.get_focused_monitor_id()
             
             if focused_monitor_id != self.monitor_id:
                 # Close this notch and open on focused monitor
                 if hasattr(self, '_debug_monitor_focus') and self._debug_monitor_focus:
-                    print(f"DEBUG: Redirecting from monitor {self.monitor_id} to focused monitor {focused_monitor_id}")
+                    logger.debug(f"Redirecting from monitor {self.monitor_id} to focused monitor {focused_monitor_id}")
                 
                 self.close_notch()
                 focused_notch = self.monitor_manager.get_instance(focused_monitor_id, 'notch')
@@ -538,7 +547,7 @@ class Notch(Window):
                     
         except (subprocess.CalledProcessError, json.JSONDecodeError, 
                 FileNotFoundError, subprocess.TimeoutExpired) as e:
-            print(f"Warning: Could not get focused monitor from Hyprland: {e}")
+            logger.warning(f"Could not get focused monitor from Hyprland: {e}")
         
         return None
     
@@ -569,6 +578,7 @@ class Notch(Window):
             "kanban": self.dashboard.kanban,
             "wallpapers": self.dashboard.wallpapers,
             "mixer": self.dashboard.mixer,
+            "weather": self.dashboard.weather_forecast,
         }
         if widget_name in dashboard_sections_map:
             section_widget_instance = dashboard_sections_map[widget_name]
@@ -788,20 +798,16 @@ class Notch(Window):
                             "application-x-executable-symbolic", 20
                         )
             except Exception as e:
-                print(f"Error updating window icon: {e}")
+                logger.error(f"Unable to update window icon: {e}")
                 try:
                     self.window_icon.set_from_icon_name("application-x-executable", 20)
                 except:
-                    self.window_icon.set_from_icon_name(
-                        "application-x-executable-symbolic", 20
-                    )
+                    self.window_icon.set_from_icon_name("application-x-executable-symbolic", 20)
         else:
             try:
                 self.window_icon.set_from_icon_name("application-x-executable", 20)
             except:
-                self.window_icon.set_from_icon_name(
-                    "application-x-executable-symbolic", 20
-                )
+                self.window_icon.set_from_icon_name("application-x-executable-symbolic", 20)
 
     def _check_occlusion(self):
         """
@@ -833,7 +839,7 @@ class Notch(Window):
                     "initialClass", ""
                 ) or active_window_data.get("class", "")
         except Exception as e:
-            print(f"Error getting window class: {e}")
+            logger.error(f"Unable to get window class: {e}")
         return ""
 
     def on_active_window_changed(self, *args):
@@ -944,7 +950,7 @@ class Notch(Window):
             GLib.timeout_add(50, self._ensure_no_text_selection)
             GLib.timeout_add(100, self._ensure_no_text_selection)
 
-            print(f"Applied buffered text: '{self._typed_chars_buffer}'")
+            logger.debug(f"Applied buffered text: '{self._typed_chars_buffer}'")
 
             self._typed_chars_buffer = ""
 
@@ -987,9 +993,7 @@ class Notch(Window):
 
             if is_valid_char and keychar:
                 self._typed_chars_buffer += keychar
-                print(
-                    f"Buffered character: {keychar}, buffer now: '{self._typed_chars_buffer}'"
-                )
+                logger.debug(f"Buffered character: {keychar}, buffer now: '{self._typed_chars_buffer}'")
                 return True
 
         if (
@@ -1011,7 +1015,7 @@ class Notch(Window):
             )
 
             if is_valid_char and keychar:
-                print(f"Notch received keypress: {keychar}")
+                logger.debug(f"Notch received keypress: {keychar}")
 
                 self.open_launcher_with_text(keychar)
                 return True
