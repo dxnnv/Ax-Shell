@@ -1,3 +1,5 @@
+import logging
+
 import gi
 import requests
 from datetime import datetime, timedelta
@@ -6,9 +8,13 @@ from gi.repository import GLib
 from fabric.widgets.label import Label
 from fabric.widgets.box import Box
 
+from utils.conversion import Conversion
+
 gi.require_version("GLib", "2.0")
 import modules.icons as icons
 from utils.weather import WeatherUtils
+
+converter = Conversion()
 
 def get_weather_emoji(weather_code):
     return WeatherUtils.get_weather_emoji(weather_code)
@@ -67,9 +73,10 @@ def create_time_period_widget(period_name, temp, emoji):
     )
 
     # Temperature
+    f_temp = round(converter.convert(temp, "c", "f"))
     temp_label = Label(
         name="forecast-period-temp",
-        markup=f"<span size='small' weight='bold'>{temp}°</span>",
+        markup=f"<span size='small' weight='bold'>{f_temp}°</span>",
         h_align="center"
     )
 
@@ -164,7 +171,7 @@ class WeatherForecast(Box):
 
         self.current_temp_label = Label(
             name="current-temperature",
-            markup="<span size='xx-large' weight='bold'>--°C</span>",
+            markup="<span size='xx-large' weight='bold'>--°F</span>",
             h_align="center"
         )
 
@@ -202,7 +209,7 @@ class WeatherForecast(Box):
         # Container for forecast days
         self.forecast_container = Box(
             name="forecast-container",
-            orientation="h",
+            orientation="v",
             spacing=12,
             visible=False,
             h_expand=True,
@@ -238,7 +245,8 @@ class WeatherForecast(Box):
     def _update_current_weather(self, temperature, emoji, description):
         """Update the current weather display"""
         # Update temperature with decimal
-        self.current_temp_label.set_markup(f"<span size='xx-large' weight='bold'>{temperature:.1f}°C</span>")
+        temp = round(converter.convert(temperature, "c", "f"))
+        self.current_temp_label.set_markup(f"<span size='xx-large' weight='bold'>{temp}°F</span>")
         self.current_emoji_label.set_markup(f"<span size='xx-large'>{emoji}</span>") # Update emoji
         self.current_weather_details.set_markup(f"<span size='medium'>{description}</span>") # Update description
         self.current_weather_container.set_visible(True) # Show the current weather container
@@ -323,9 +331,9 @@ class WeatherForecast(Box):
                     date = time_obj.date()
                     hour = time_obj.hour
 
-                    # Process today and the next 2 days (3 days total)
+                    # Process today and the next 6 days (7 days total)
                     days_diff = (date - today).days
-                    if days_diff < 0 or days_diff > 2:
+                    if days_diff < 0 or days_diff > 6:
                         continue
 
                     is_today = (days_diff == 0)
@@ -378,7 +386,7 @@ class WeatherForecast(Box):
                         daily_data[date][period]['codes'].append(weather_code)
 
                 # Process daily data and create widgets
-                forecast_widgets = []
+                model = []
                 for date in sorted(daily_data.keys()):
                     day_data = daily_data[date]
                     periods_data = {}
@@ -400,7 +408,6 @@ class WeatherForecast(Box):
                                                        key=period_info['codes'].count)
 
                                 emoji = WeatherUtils.get_weather_emoji(most_common_code)
-
                                 periods_data[period] = {
                                     'temp': avg_temp,
                                     'emoji': emoji
@@ -413,36 +420,51 @@ class WeatherForecast(Box):
                                     'emoji': "🌡️"
                                 }
 
-                    if periods_data:  # Only create the widget if we have data
-                        day_widget = create_day_forecast(date, periods_data)
-                        forecast_widgets.append(day_widget)
+                    if periods_data:
+                        model.append((date, periods_data))
 
                 # Update UI in the main thread
-                GLib.idle_add(self._update_forecast_ui, forecast_widgets)
-
+                GLib.idle_add(self._render_forecast_from_model, model)
             else:
                 GLib.idle_add(self._show_error)
 
-        except Exception as e:
-            print(f"Error fetching weather forecast: {e}")
+        except Exception:
+            logging.error("Unable to fetch weather forecast: {e}")
             GLib.idle_add(self._show_error)
 
-    def _update_forecast_ui(self, forecast_widgets):
-        """Update the UI with forecast data"""
-        # Clear existing forecast
+    def _render_forecast_from_model(self, model):
+        # clear container
         for child in self.forecast_container.get_children():
             self.forecast_container.remove(child)
 
-        # Add new forecast widgets
-        for widget in forecast_widgets:
-            self.forecast_container.add(widget)
+        seen = set()
+        day_widgets = []
+        for date, periods_data in model:
+            if date in seen:
+                continue
+            day_widgets.append(create_day_forecast(date, periods_data))
+            seen.add(date)
+            if len(day_widgets) == 6:
+                break
 
-        # Show/hide appropriate elements
+        cols = 3
+        row = None
+        for i, w in enumerate(day_widgets):
+            if i % cols == 0:
+                row = Box(
+                    name="forecast-row",
+                    orientation="h",
+                    spacing=12,
+                    h_align="center",
+                    h_expand=True,
+                )
+                self.forecast_container.add(row)
+            row.add(w)
+
         self.loading_label.set_visible(False)
         self.error_label.set_visible(False)
         self.forecast_container.set_visible(True)
         self.forecast_container.show_all()
-
         return GLib.SOURCE_REMOVE
 
     def _show_error(self):

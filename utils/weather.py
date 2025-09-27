@@ -77,7 +77,6 @@ class WeatherUtils:
     def _try_ip_provider(session: requests.Session) -> Optional[Tuple[float, float, str]]:
         """Try providers in order; return (lat, lon, city) or None."""
         headers = {"User-Agent": _APP_UA}
-        # 1) ipapi.co: anonymous, generous limits
         try:
             r = session.get("https://ipapi.co/json/", headers=headers, timeout=5)
             if r.ok:
@@ -92,7 +91,7 @@ class WeatherUtils:
 
     @staticmethod
     def get_coordinates(session: Optional[requests.Session] = None) -> Tuple[float, float, str]:
-        """Get coordinates using env/config first, then IP-based geolookup with fallbacks."""
+        """Get coordinates using env/config first, then IP-based geolookup, then fallback."""
         sess = session or requests.Session()
 
         # Manual override via env
@@ -108,7 +107,7 @@ class WeatherUtils:
             except Exception:
                 pass
 
-        # IP providers
+        # IP provider
         found = WeatherUtils._try_ip_provider(sess)
         if found:
             return found

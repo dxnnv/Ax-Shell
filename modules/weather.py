@@ -5,6 +5,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from gi.repository import Gdk, GLib
 
+from utils.conversion import Conversion
 from utils.weather import WeatherUtils
 
 gi.require_version("Gdk", "3.0")
@@ -17,7 +18,7 @@ logger = logger.bind(name="Weather", type="Module")
 def on_button_enter(widget, _):
     window = widget.get_window()
     if window:
-        window.set_cursor(Gdk.Cursor.new_from_name(widget.get_display(), "hand2"))
+        window.set_cursor(Gdk.Cursor.new_for_display(window.get_display(), Gdk.CursorType.HAND2))
 
 def on_button_leave(widget, _):
     window = widget.get_window()
@@ -36,6 +37,7 @@ class Weather(Box):
     def __init__(self, **kwargs) -> None:
         super().__init__(name="weather", orientation="h", spacing=8, **kwargs)
 
+        self.converter = Conversion()
         self.label = Label(name="weather-label", markup=icons.loader)
         self.button = Button(
             name="weather-button",
@@ -81,7 +83,7 @@ class Weather(Box):
         # Get coordinates automatically
         if not self.get_coordinates():
             self.has_weather_data = False
-            GLib.idle_add(self.label.set_markup, f"{icons.cloud_off} Location Error")
+            GLib.idle_add(lambda: (self.label.set_markup, f"{icons.cloud_off} Location Error") or False)
             return
 
         url = WeatherUtils.get_met_api_url(self.lat, self.lon)
@@ -90,16 +92,17 @@ class Weather(Box):
             if response.status_code == 200:
                 data = response.json()["properties"]["timeseries"][0]["data"]
                 temp = data["instant"]["details"]["air_temperature"]
+                temp = self.converter.convert(temp, "c", "f")
                 # prefer next_1_hours, fallback to next_6_hours
                 code = (data.get("next_1_hours") or data.get("next_6_hours") or {}).get("summary", {}).get("symbol_code")
                 emoji = WeatherUtils.get_weather_emoji(code or "")
-                GLib.idle_add(self.label.set_label, f"{emoji} {int(round(temp))}°C")
+                GLib.idle_add(lambda: (self.label.set_label, f"{emoji} {int(round(temp))}°F") or False)
                 self.has_weather_data = True
             else:
                 logger.warning(f"met.no error {response.status_code}: {response.text[:120]}")
                 self.has_weather_data = False
-                GLib.idle_add(self.label.set_markup, f"{icons.cloud_off} Unavailable")
+                GLib.idle_add(lambda: (self.label.set_markup, f"{icons.cloud_off} Unavailable") or False)
         except Exception as e:
             self.has_weather_data = False
             logger.warning(f"Error fetching weather: {e}")
-            GLib.idle_add(self.label.set_markup, f"{icons.cloud_off} Error")
+            GLib.idle_add(lambda: (self.label.set_markup, f"{icons.cloud_off} Error") or False)

@@ -339,28 +339,25 @@ class Conversion:
         # 1) Check if it is in any of the charts (not coins)
         for chart_name, chart in charts.items():
             if from_type in chart and to_type in chart:
+                if from_type == to_type:
+                    return value
+
                 # Temperatures use lambdas
                 if chart_name == "TEMPERATURE_CHART":
-                    if from_type == to_type:
-                        return value
                     to_kelvin = chart[from_type][0]
                     from_kelvin = chart[to_type][1]
                     return from_kelvin(to_kelvin(value))
                 
                 # Handle WEIGHT_CHART separately (tuple values)
                 if chart_name == "WEIGHT_CHART":
-                    if from_type == to_type:
-                        return value
                     to_kg = chart[from_type][0]
                     from_kg = chart[to_type][1]
                     return value * to_kg * from_kg
 
                 # Any other numerical chart
-                if from_type == to_type:
-                    return value
                 return value * (chart[from_type] / chart[to_type])
 
-        # 2) If both are currency codes (ex.: “USD”, “ARS”)
+        # 2) If both are currency codes (ex.: “USD,” “ARS”),
         #    We assume that they are capitalized and have 3 letters.
         if len(from_type) == 3 and len(to_type) == 3 and from_type.isalpha() and to_type.isalpha():
             return self._convert_currency_via_floatrates(value, from_type, to_type)
@@ -392,8 +389,8 @@ class Conversion:
         rate = data[to_lower]["rate"]
         return value * rate
 
-    def parse_input_and_convert(self, input: str):
-        parts = input.split()
+    def parse_input_and_convert(self, _input: str):
+        parts = _input.split()
         addition = "s" if parts[-1].endswith("s") else ""
 
         if "and" in parts:  # value unit1 and value2 unit2 _ to destination_unit
@@ -423,23 +420,23 @@ class Conversion:
             to_type = self.clean_type(to_type)
             return self.convert(value, from_type, to_type), to_type + addition
 
-    def clean_type(self, type: str) -> str:
+    def clean_type(self, _type: str) -> str:
         """
         If it is currency (3 letters), it is capitalized.
         If it ends in 's' (and is not 'Celsius'), remove the 's' to
         the other units.
         """
-        if len(type) == 3 and type.isalpha():
-            return type.upper()
-        if type.endswith("s") and type.lower() != "celsius":
+        if len(_type) == 3 and _type.isalpha():
+            return _type.upper()
+        if _type.endswith("s") and _type.lower() != "celsius":
             # For tables that have singular/plural
-            singular = type[:-1].lower()
+            singular = _type[:-1].lower()
             # If it exists in STORAGE_TYPE_CHART, we use it; 
             # Otherwise, we return lowercase singular for other charts.
             if singular in self.units.STORAGE_TYPE_CHART:
                 return singular
             return singular.lower()
-        return type
+        return _type
 
 
 # Quick usage example:
