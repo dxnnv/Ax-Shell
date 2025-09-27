@@ -1,3 +1,5 @@
+from typing import Literal
+
 import gi
 
 gi.require_version("Gray", "0.1")
@@ -5,19 +7,25 @@ import logging
 import os
 
 from fabric.widgets.box import Box
-from gi.repository import Gdk, GdkPixbuf, GLib, Gray, Gtk
+from gi.repository import Gdk, GdkPixbuf, GLib, Gray, Gtk, GObject
 
 import config.data as data
 
 logger = logging.getLogger(__name__)
 
 class SystemTray(Box):
+    __gsignals__ = {
+        "items-present-changed": (GObject.SIGNAL_RUN_FIRST, None, (bool,))
+    }
+
     def __init__(self, pixel_size: int = 20, refresh_interval: int = 1, **kwargs) -> None:
-        orientation = Gtk.Orientation.HORIZONTAL if not data.VERTICAL else Gtk.Orientation.VERTICAL
+        orientation: Literal["horizontal", "vertical", "h", "v"] = "horizontal" if not data.VERTICAL else "vertical"
         super().__init__(
             name="systray",
             orientation=orientation,
             spacing=8,
+            visible=False,
+            all_visible=False,
             **kwargs
         )
         self.enabled = True
@@ -33,13 +41,30 @@ class SystemTray(Box):
 
         GLib.timeout_add_seconds(self.refresh_interval, self._refresh_all_items)
 
+        self._has_items = False
+        self.connect("add", self._on_child_changed)
+        self.connect("remove", self._on_child_changed)
+        self._update_visibility()
+
+    def _on_child_changed(self, *_):
+        self._update_visibility()
+
+    def _has_visible_children(self) -> bool:
+        return any(child.get_visible() for child in self.get_children())
+
     def set_visible(self, visible: bool):
         self.enabled = visible
         self._update_visibility()
 
     def _update_visibility(self):
-        has = len(self.get_children()) > 0
-        super().set_visible(self.enabled and has)
+        has = self.enabled and self._has_visible_children()
+        if has != self._has_items:
+            self._has_items = has
+            self.emit("items-present-changed", has)
+        super().set_visible(has)
+
+    def has_items(self) -> bool:
+        return self._has_items
 
     def _get_item_pixbuf(self, item: Gray.Item) -> GdkPixbuf.Pixbuf:
         try:
@@ -71,7 +96,7 @@ class SystemTray(Box):
                 "image-missing", self.pixel_size, Gtk.IconLookupFlags.FORCE_SIZE
             )
 
-    def _refresh_item_ui(self, identifier: str, item: Gray.Item, button: Gtk.Button):
+    def _refresh_item_ui(self, _identifier: str, item: Gray.Item, button: Gtk.Button):
         pixbuf = self._get_item_pixbuf(item)
         img = button.get_image()
         if isinstance(img, Gtk.Image):
@@ -91,7 +116,6 @@ class SystemTray(Box):
             button.set_has_tooltip(False)
 
     def _refresh_all_items(self) -> bool:
-
         for ident, item in self.items_by_id.items():
             btn = self.buttons_by_id.get(ident)
             if btn:
@@ -112,10 +136,8 @@ class SystemTray(Box):
         self.buttons_by_id[identifier] = btn
         self.items_by_id[identifier] = item
 
-        item.connect("notify::icon-pixmaps",
-                     lambda itm, pspec: self._refresh_item_ui(identifier, itm, btn))
-        item.connect("notify::icon-name",
-                     lambda itm, pspec: self._refresh_item_ui(identifier, itm, btn))
+        item.connect("notify::icon-pixmaps", lambda itm, pspec: self._refresh_item_ui(identifier, itm, btn))
+        item.connect("notify::icon-name", lambda itm, pspec: self._refresh_item_ui(identifier, itm, btn))
 
         try:
             item.connect("updated", lambda itm: self._refresh_item_ui(identifier, itm, btn))
@@ -136,6 +158,7 @@ class SystemTray(Box):
         tip = item.get_tooltip_text() if hasattr(item, 'get_tooltip_text') else getattr(item, 'get_title', lambda: None)()
         if tip:
             btn.set_tooltip_text(tip)
+        btn.connect("notify::visible", lambda *a: self._update_visibility())
         return btn
 
     def on_item_instance_removed(self, identifier: str, removed_item: Gray.Item):
