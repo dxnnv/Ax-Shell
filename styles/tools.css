@@ -67,7 +67,7 @@
 #tool-sep {
   min-width: 4px;
   min-height: 4px;
-  margin: 0px 4px;
+  margin: 0 4px;
   border-radius: 16px;
   background-color: var(--surface-bright);
 }

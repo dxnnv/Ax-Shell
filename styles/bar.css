@@ -62,9 +62,8 @@
 }
 
 #bar-inner.hidden {
-  margin: 8px;
-  margin-top: -40px;
-  opacity: 0;
+    margin: -40px 8px 8px;
+    opacity: 0;
 }
 
 #date-time {
@@ -219,12 +218,12 @@ tooltip > * {
 }
 
 #button-corner {
-  border-radius: 0px;
+  border-radius: 0;
   min-width: 20px;
   min-height: 20px;
 }
 
 #notch,
 #bar {
-  border-radius: 0px;
+  border-radius: 0;
 }

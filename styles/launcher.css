@@ -130,8 +130,7 @@
 }
 
 #app-icon {
-  margin: -8px;
-  margin-right: 4px;
+    margin: -8px 4px -8px -8px;
 }
 
 #app-label {
