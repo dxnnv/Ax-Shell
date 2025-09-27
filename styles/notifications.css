@@ -43,9 +43,8 @@
   padding: 16px;
   border: 2px solid var(--surface);
   background-color: var(--shadow);
-  margin: 8px;
-  margin-bottom: 4px;
-  min-width: 330px;
+    margin: 8px 8px 4px;
+    min-width: 330px;
 }
 
 #notification-navigation {
