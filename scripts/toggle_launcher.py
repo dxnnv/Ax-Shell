@@ -12,7 +12,7 @@ from config.loguru_config import logger
 
 logger = logger.bind(name="Launcher", type="Script")
 
-# Add the Ax-Shell directory to Python path
+# Add the Ax-Shell directory to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
